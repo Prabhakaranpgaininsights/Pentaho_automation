@@ -131,7 +131,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # ── Anthropic ────────────────────────────────────────────
 # ANTHROPIC_API_KEY = 'your-api-key'
-ANTHROPIC_API_KEY = config("ANTHROPIC_API_KEY")
+ANTHROPIC_API_KEY = "demo-key-123"
 ANTHROPIC_MODEL   = config("ANTHROPIC_MODEL", default="claude-sonnet-4-20250514")
 
 # ── PostgreSQL ───────────────────────────────────────────
