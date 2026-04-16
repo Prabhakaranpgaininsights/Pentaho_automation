@@ -31,7 +31,6 @@ from django.core.files.base import ContentFile
 from decouple import config
 import vosk
 import queue
-import sounddevice as sd
 from django.db import connection
 
 
