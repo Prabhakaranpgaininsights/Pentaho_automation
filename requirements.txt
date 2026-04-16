@@ -18,7 +18,6 @@ packaging==26.0
 playwright==1.58.0
 psycopg2==2.9.11
 psycopg2-binary==2.9.11
-PyAudio==0.2.14
 pycparser==3.0
 pyee==13.0.1
 PyMySQL==1.1.2
