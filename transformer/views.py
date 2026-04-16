@@ -1552,8 +1552,8 @@ def get_preferences(request):
 q = queue.Queue()
 
 # Initialize model once
-model = vosk.Model("C:/Users/prabhakaranp/Documents/prabhakaran/ktr_generator/transformer/vosk-model-small-en-us-0.15")
-rec = vosk.KaldiRecognizer(model, 16000)
+# model = vosk.Model("C:/Users/prabhakaranp/Documents/prabhakaran/ktr_generator/transformer/vosk-model-small-en-us-0.15")
+# rec = vosk.KaldiRecognizer(model, 16000)
 
 # Callback only puts audio in queue
 def callback(indata, frames, time, status):
