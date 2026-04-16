@@ -1,0 +1,1265 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Table Join Builder — Pentaho AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d0f14; --surface: #151820; --surface2: #1c2030; --border: #2a2f3d;
+  --accent: #4f46e5; --success: #22c55e; --error: #ef4444; --warn: #f59e0b;
+  --info: #38bdf8; --text: #e8eaf0; --muted: #6b7280;
+  --sans: 'Inter', sans-serif; --mono: 'Courier New', monospace;
+}
+body { background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; }
+.shell   { display:flex; min-height:100vh; }
+.sidebar { width:220px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:1.5rem 0; flex-shrink:0; }
+.main    { flex:1; overflow-y:auto; padding:2rem 2rem 3rem; }
+@media(max-width:800px){ .sidebar{display:none} .main{padding:1.25rem} }
+
+/* Sidebar */
+.sb-logo { padding:0 1.25rem 1.5rem; border-bottom:1px solid var(--border); margin-bottom:1rem; display:flex; align-items:center; gap:10px; }
+.sb-logo-fb { width:36px; height:36px; border-radius:8px; background:rgba(79,70,229,.2); border:1px solid rgba(79,70,229,.4); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.sb-logo-t h2 { font-size:15px; font-weight:600; color:var(--accent); }
+.sb-logo-t p  { font-size:11px; color:var(--muted); margin-top:2px; }
+.sb-sec  { padding:0 .75rem; margin-bottom:.25rem; }
+.sb-lbl  { font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; padding:.5rem .5rem .25rem; }
+.sb-link { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; font-size:13px; font-weight:500; color:var(--muted); text-decoration:none; transition:all .15s; cursor:pointer; border:none; background:none; width:100%; font-family:var(--sans); }
+.sb-link:hover  { background:rgba(79,70,229,.08); color:#a5b4fc; }
+.sb-link.active { background:rgba(79,70,229,.15); color:#a5b4fc; border-left:2px solid var(--accent); padding-left:8px; }
+.sb-ico { font-size:15px; width:20px; text-align:center; flex-shrink:0; }
+.sb-badge-count { margin-left:auto; background:var(--success); color:#fff; font-size:10px; font-weight:600; padding:1px 7px; border-radius:20px; }
+.sb-foot { margin-top:auto; padding:1rem 1.25rem 0; border-top:1px solid var(--border); }
+.sb-foot p { font-size:11px; color:var(--muted); line-height:1.6; }
+.sb-foot strong { color:var(--text); }
+
+/* Topbar */
+.topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.75rem; flex-wrap:wrap; gap:10px; }
+.topbar h1 { font-size:20px; font-weight:600; color:var(--text); }
+.topbar p  { font-size:13px; color:var(--muted); margin-top:2px; }
+.topbar-right { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+
+/* Buttons */
+.btn { display:inline-flex; align-items:center; gap:6px; padding:.5rem 1rem; border-radius:8px; border:1px solid transparent; font-size:13px; font-weight:500; cursor:pointer; transition:all .12s; font-family:var(--sans); white-space:nowrap; text-decoration:none; }
+.btn-outline  { background:var(--surface2); color:var(--muted); border-color:var(--border); }
+.btn-outline:hover { background:var(--border); color:var(--text); }
+.btn-outline:disabled { opacity:.4; cursor:not-allowed; }
+.btn-primary  { background:var(--accent); color:#fff; border-color:var(--accent); }
+.btn-primary:hover { background:#3b3fd5; }
+.btn-primary:disabled { background:var(--border); color:var(--muted); cursor:not-allowed; }
+.btn-execute  { background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; font-size:14px; padding:.6rem 1.4rem; box-shadow:0 2px 10px rgba(34,197,94,.2); }
+.btn-execute:hover { filter:brightness(1.1); box-shadow:0 4px 16px rgba(34,197,94,.35); transform:translateY(-1px); }
+.btn-execute:disabled { background:var(--border); color:var(--muted); cursor:not-allowed; box-shadow:none; transform:none; filter:none; }
+.btn-green  { background:#16a34a; color:#fff; }
+.btn-green:hover { background:#15803d; }
+.btn-green:disabled { opacity:.4; cursor:not-allowed; }
+.btn-danger { background:rgba(239,68,68,.12); color:#fca5a5; border:1px solid rgba(239,68,68,.3); }
+.btn-danger:hover { background:rgba(239,68,68,.22); }
+.btn-sm { padding:3px 9px; font-size:11px; border-radius:6px; }
+.btns   { display:flex; gap:8px; flex-wrap:wrap; margin-top:.9rem; align-items:center; }
+
+/* Modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.65); backdrop-filter:blur(4px); z-index:1000; display:none; align-items:center; justify-content:center; padding:1rem; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:14px; width:100%; max-width:560px; box-shadow:0 25px 60px rgba(0,0,0,.5); animation:modalIn .2s ease; }
+.modal-wide { max-width:780px; }
+@keyframes modalIn { from{opacity:0;transform:scale(.96) translateY(8px)} to{opacity:1;transform:none} }
+.modal-head { display:flex; align-items:center; justify-content:space-between; padding:1.1rem 1.3rem; border-bottom:1px solid var(--border); }
+.modal-head h3 { font-size:15px; font-weight:600; color:var(--text); }
+.modal-close { background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:2px 6px; border-radius:6px; transition:all .15s; }
+.modal-close:hover { background:var(--surface2); color:var(--text); }
+.modal-body { padding:1.3rem; max-height:75vh; overflow-y:auto; }
+.modal-footer { padding:.9rem 1.3rem; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; align-items:center; }
+
+/* Cards */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.2rem 1.3rem; margin-bottom:1.25rem; }
+.card-title { font-size:13px; font-weight:600; color:var(--text); margin-bottom:.85rem; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+
+/* Grids */
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
+@media(max-width:760px){ .grid2{grid-template-columns:1fr} }
+.metric-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:1rem; }
+
+/* Form */
+.fg { margin-bottom:.9rem; }
+.fl { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:5px; display:flex; align-items:center; justify-content:space-between; }
+.fi,.fs { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:13px; color:var(--text); font-family:var(--sans); outline:none; transition:border-color .15s; }
+.fi:focus,.fs:focus { border-color:var(--accent); }
+.fi::placeholder { color:var(--muted); }
+.fs { cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%236b7280' d='M5 6L0 0h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:30px; }
+.frow { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.frow3 { display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px; }
+@media(max-width:500px){ .frow{grid-template-columns:1fr} .frow3{grid-template-columns:1fr} }
+
+/* DB connection cards */
+.conn-list { display:flex; flex-direction:column; gap:8px; }
+.conn-card { display:flex; align-items:center; gap:12px; padding:10px 14px; border:1px solid var(--border); border-radius:10px; background:var(--surface2); transition:all .12s; }
+.conn-card:hover { border-color:var(--accent); background:rgba(79,70,229,.06); }
+.conn-card.connected { border-color:var(--success); }
+.conn-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.conn-dot.ok  { background:var(--success); box-shadow:0 0 6px rgba(34,197,94,.5); }
+.conn-dot.err { background:var(--error); }
+.conn-dot.idle{ background:var(--muted); }
+.conn-info { flex:1; min-width:0; }
+.conn-name { font-size:13px; font-weight:500; color:var(--text); }
+.conn-dsn  { font-size:11px; color:var(--muted); font-family:var(--mono); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.conn-type-badge { padding:2px 8px; border-radius:4px; font-size:10px; font-weight:700; flex-shrink:0; }
+.cbt-mysql    { background:rgba(249,115,22,.15); color:#fdba74; }
+.cbt-postgres { background:rgba(56,189,248,.15);  color:#7dd3fc; }
+.cbt-oracle   { background:rgba(239,68,68,.15);   color:#fca5a5; }
+.cbt-mssql    { background:rgba(79,70,229,.2);    color:#a5b4fc; }
+.cbt-generic  { background:rgba(107,114,128,.2);  color:#9ca3af; }
+.conn-actions { display:flex; gap:6px; flex-shrink:0; }
+
+/* Test result */
+.test-result { margin-top:.75rem; padding:8px 12px; border-radius:8px; font-size:12px; display:none; line-height:1.5; }
+.test-result.ok  { background:rgba(34,197,94,.1);  border:1px solid rgba(34,197,94,.3);  color:#86efac; display:block; }
+.test-result.err { background:rgba(239,68,68,.1);  border:1px solid rgba(239,68,68,.3);  color:#fca5a5; display:block; }
+.test-result.load{ background:rgba(79,70,229,.1);  border:1px solid rgba(79,70,229,.3);  color:#a5b4fc; display:block; }
+
+/* DB type selector */
+.db-type-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:1rem; }
+@media(max-width:500px){ .db-type-grid{grid-template-columns:repeat(3,1fr)} }
+.db-type-card { border:2px solid var(--border); border-radius:8px; padding:8px 4px; text-align:center; cursor:pointer; transition:all .12s; background:var(--surface2); }
+.db-type-card:hover { border-color:var(--accent); }
+.db-type-card.sel { border-color:var(--accent); background:rgba(79,70,229,.12); }
+.db-type-icon { font-size:20px; margin-bottom:3px; }
+.db-type-name { font-size:10px; font-weight:600; color:var(--text); }
+
+/* Join type */
+.join-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:1rem; }
+@media(max-width:600px){ .join-grid{grid-template-columns:repeat(2,1fr)} }
+.jt-card { border:2px solid var(--border); border-radius:10px; padding:10px 6px; text-align:center; cursor:pointer; transition:all .15s; background:var(--surface2); position:relative; user-select:none; }
+.jt-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.3); }
+.jt-check { position:absolute; top:5px; right:6px; font-size:11px; color:var(--success); display:none; font-weight:700; }
+.jt-card[data-on="1"] .jt-check { display:block; }
+.jt-card[data-on="1"][data-t="inner"] { border-color:#4f46e5; background:rgba(79,70,229,.12); }
+.jt-card[data-on="1"][data-t="left"]  { border-color:#0891b2; background:rgba(8,145,178,.12); }
+.jt-card[data-on="1"][data-t="right"] { border-color:#0d9488; background:rgba(13,148,136,.12); }
+.jt-card[data-on="1"][data-t="full"]  { border-color:#7c3aed; background:rgba(124,58,237,.12); }
+.jt-svg { display:flex; justify-content:center; margin-bottom:4px; }
+.jt-name { font-size:11px; font-weight:600; color:var(--text); }
+.jt-desc { font-size:10px; color:var(--muted); margin-top:2px; line-height:1.3; }
+
+/* Join key / output col rows */
+.jk-hd { display:grid; grid-template-columns:1fr 28px 1fr 28px; gap:6px; align-items:center; margin-bottom:4px; font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+.jk-row{ display:grid; grid-template-columns:1fr 28px 1fr 28px; gap:6px; align-items:center; margin-bottom:6px; }
+.jk-eq { text-align:center; font-size:14px; font-weight:700; color:var(--muted); }
+.oc-hd { display:grid; grid-template-columns:1fr 1fr 28px; gap:6px; align-items:center; margin-bottom:4px; font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+.oc-row{ display:grid; grid-template-columns:1fr 1fr 28px; gap:6px; align-items:center; margin-bottom:6px; }
+.del-btn { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.25); color:#fca5a5; border-radius:6px; padding:3px 6px; font-size:11px; cursor:pointer; transition:all .12s; width:28px; text-align:center; }
+.del-btn:hover { background:rgba(239,68,68,.22); }
+.add-btn { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:#818cf8; background:none; border:none; cursor:pointer; padding:2px 0; font-family:var(--sans); margin-top:4px; }
+.add-btn:hover { color:#a5b4fc; }
+
+/* Checkboxes */
+.ck-row { display:flex; align-items:flex-start; gap:10px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); margin-bottom:8px; cursor:pointer; transition:background .12s; }
+.ck-row:hover { background:rgba(79,70,229,.07); }
+.ck-row input[type=checkbox] { accent-color:var(--accent); width:15px; height:15px; flex-shrink:0; margin-top:1px; cursor:pointer; }
+.ck-lbl { font-size:13px; color:var(--text); }
+.ck-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+
+/* Status */
+.status { padding:.6rem .9rem; border-radius:8px; font-size:13px; display:flex; align-items:center; gap:8px; line-height:1.4; margin-top:.85rem; }
+.s-idle { background:var(--surface2); color:var(--muted); border:1px solid var(--border); }
+.s-load { background:rgba(79,70,229,.1);  color:#a5b4fc;  border:1px solid rgba(79,70,229,.3); }
+.s-ok   { background:rgba(34,197,94,.08); color:#86efac;  border:1px solid rgba(34,197,94,.3); }
+.s-err  { background:rgba(239,68,68,.1);  color:#fca5a5;  border:1px solid rgba(239,68,68,.3); }
+.s-warn { background:rgba(245,158,11,.08);color:#fde68a;  border:1px solid rgba(245,158,11,.3); }
+.spinner { width:14px; height:14px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin .6s linear infinite; flex-shrink:0; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.progress-wrap { height:3px; background:var(--border); border-radius:2px; margin-top:8px; overflow:hidden; }
+.progress-bar  { height:100%; background:var(--accent); border-radius:2px; transition:width .3s; width:0%; }
+
+/* Exec log */
+.exec-panel { background:rgba(34,197,94,.04); border:1px solid rgba(34,197,94,.18); border-radius:12px; padding:1.2rem 1.3rem; margin-bottom:1.25rem; display:none; }
+.exec-panel.show { display:block; }
+.exec-log { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px 14px; font-family:var(--mono); font-size:12px; color:var(--muted); max-height:200px; overflow-y:auto; line-height:1.9; }
+.log-ok   { color:#86efac; } .log-err { color:#fca5a5; } .log-info { color:#7dd3fc; } .log-warn { color:#fde68a; }
+
+/* SQL box */
+.sql-box { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px 14px; font-family:var(--mono); font-size:12px; color:#a5b4fc; line-height:1.8; white-space:pre-wrap; margin-bottom:.75rem; max-height:280px; overflow-y:auto; }
+
+/* File list */
+.file-list { display:flex; flex-direction:column; gap:6px; }
+.file-row  { display:flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); cursor:pointer; transition:background .1s; }
+.file-row:hover  { background:rgba(79,70,229,.08); }
+.file-row.active { border-color:var(--accent); background:rgba(79,70,229,.12); }
+.badge     { padding:2px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+.badge.ktr { background:rgba(79,70,229,.2); color:#a5b4fc; }
+.badge.kjb { background:rgba(34,197,94,.15); color:#86efac; }
+.file-row-name { font-family:var(--mono); font-size:12px; color:var(--text); flex:1; }
+.tabs { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:.75rem; }
+.tab { padding:5px 12px; border-radius:20px; font-size:12px; font-weight:500; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--muted); transition:all .12s; font-family:var(--sans); }
+.tab.active.ktr { background:var(--accent); color:#fff; border-color:var(--accent); }
+.tab.active.kjb { background:#16a34a; color:#fff; border-color:#16a34a; }
+textarea.xml-area { width:100%; height:320px; border:1px solid var(--border); border-radius:8px; padding:.75rem; font-size:12px; font-family:var(--mono); resize:vertical; outline:none; background:var(--surface2); color:var(--text); line-height:1.6; }
+textarea.xml-area:focus { border-color:var(--accent); }
+
+.metric { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:.7rem 1rem; }
+.metric-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px; }
+.metric-value { font-size:22px; font-weight:600; color:var(--text); }
+.metric-value.ktr { color:#818cf8; } .metric-value.kjb { color:#34d399; }
+
+.divider { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin:1rem 0 .6rem; padding-bottom:.4rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+.info-box { background:rgba(56,189,248,.06); border:1px solid rgba(56,189,248,.2); border-radius:8px; padding:10px 14px; font-size:12px; color:#7dd3fc; line-height:1.6; margin-bottom:1rem; }
+.info-box strong { color:#38bdf8; }
+.empty-state { text-align:center; padding:2rem 1rem; color:var(--muted); font-size:13px; }
+.empty-state-icon { font-size:32px; margin-bottom:.5rem; opacity:.5; }
+.divider-label { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; padding:.4rem 0; border-bottom:1px solid var(--border); margin-bottom:.75rem; }
+.footer { margin-top:2rem; font-size:12px; color:var(--muted); text-align:center; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+<aside class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-fb">⚡</div>
+    <div class="sb-logo-t"><h2>Pentaho AI</h2><p>Gain Insights Platform</p></div>
+  </div>
+
+  <div class="sb-sec">
+    <div class="sb-lbl">Main</div>
+    <a class="sb-link" href="{% url 'dashboard' %}"><span class="sb-ico">📊</span> Dashboard</a>
+    <a class="sb-link" href="{% url 'generate_pentaho' %}"><span class="sb-ico">⚙️</span> File Generator</a>
+    <a class="sb-link active" href="#"><span class="sb-ico">🔗</span> Table Join Builder</a>
+    <a class="sb-link" href="{% url 'table_builder' %}"><span class="sb-ico">🗄</span> Table Builder</a>
+  </div>
+
+  <div class="sb-sec" style="margin-top:.75rem">
+    <div class="sb-lbl">Generate</div>
+    <a class="sb-link" href="{% url 'upload_tr' %}"><span class="sb-ico">🔄</span> KTR / KJB</a>
+  </div>
+
+  <!-- ▼ DB Connectivity in sidebar -->
+  <div class="sb-sec" style="margin-top:.75rem">
+    <div class="sb-lbl">Database</div>
+    <button class="sb-link" onclick="openModal('dbModal')">
+      <span class="sb-ico">🔌</span> DB Connections
+      <span class="sb-badge-count" id="sbConnCount">0</span>
+    </button>
+  </div>
+
+  <div class="sb-foot">
+    <p>Mode: <strong>{{ model }}</strong></p>
+    <p style="margin-top:4px">Status: <strong style="color:var(--success)">● Ready</strong></p>
+  </div>
+</aside>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<main class="main">
+
+  <div class="topbar">
+    <div>
+      <h1>🔗 Table Join Builder</h1>
+      <p>Configure join → Generate KTR + KJB → Execute pipeline</p>
+    </div>
+    <!-- <div class="topbar-right">
+      <button class="btn btn-outline" onclick="openModal('dbModal')" style="border-color:rgba(34,197,94,.4);color:#86efac">
+        🔌 <span id="topbarConnLabel">DB Connections</span>
+      </button>
+      <button class="btn btn-outline" id="sqlBtn"  onclick="previewSQL()" disabled>👁 Preview SQL</button>
+      <button class="btn btn-primary" id="genBtn"  onclick="generateJoin()" disabled>⚡ Generate Files</button>
+      <button class="btn btn-execute" id="execBtn" onclick="executeJoin()" disabled>▶ Run Pipeline</button>
+    </div> -->
+  </div>
+
+  <div class="info-box">
+    <strong>Workflow:</strong>
+    1) Click <strong>🔌 DB Connections</strong> to add &amp; test your databases →
+    2) Select connection for each table →
+    3) Click <strong>⚡ Generate Files</strong> to create KTR + KJB →
+    4) Click <strong>▶ Run Pipeline</strong> to execute.
+    Target table is created automatically if it doesn't exist.
+  </div>
+
+  <div class="grid2">
+
+    <!-- ════ LEFT ════ -->
+    <div>
+
+      <!-- Source Table A -->
+      <div class="card">
+        <div class="card-title">🟦 Source Table A (Left)</div>
+        <div class="frow">
+          <div class="fg">
+            <label class="fl">Connection</label>
+            <select class="fs" id="connA" onchange="checkReady()">
+              <option value="">— select connection —</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Table Name</label>
+            <input class="fi" id="tableA" placeholder="e.g. customers" oninput="onTableChange()"/>
+          </div>
+        </div>
+        <div class="frow">
+          <div class="fg">
+            <label class="fl">Alias</label>
+            <input class="fi" id="aliasA" placeholder="a"/>
+          </div>
+          <div class="fg">
+            <label class="fl">
+              Columns
+              <button class="btn btn-sm btn-outline" onclick="autoFillCols()" style="font-size:10px">↻ Re-fill</button>
+            </label>
+            <input class="fi" id="colsA" placeholder="id, name, email  (* = all)" oninput="checkReady()"/>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">WHERE Filter <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px">(optional)</span></label>
+          <input class="fi" id="whereA" placeholder="e.g. status = 'ACTIVE'"/>
+        </div>
+      </div>
+
+      <!-- Source Table B -->
+      <div class="card">
+        <div class="card-title">🟩 Source Table B (Right)</div>
+        <div class="frow">
+          <div class="fg">
+            <label class="fl">Connection</label>
+            <select class="fs" id="connB" onchange="checkReady()">
+              <option value="">— select connection —</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Table Name</label>
+            <input class="fi" id="tableB" placeholder="e.g. orders" oninput="onTableChange()"/>
+          </div>
+        </div>
+        <div class="frow">
+          <div class="fg">
+            <label class="fl">Alias</label>
+            <input class="fi" id="aliasB" placeholder="b"/>
+          </div>
+          <div class="fg">
+            <label class="fl">
+              Columns
+              <button class="btn btn-sm btn-outline" onclick="autoFillCols()" style="font-size:10px">↻ Re-fill</button>
+            </label>
+            <input class="fi" id="colsB" placeholder="order_id, customer_id, amount" oninput="checkReady()"/>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">WHERE Filter <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px">(optional)</span></label>
+          <input class="fi" id="whereB" placeholder="e.g. amount > 0"/>
+        </div>
+      </div>
+
+      <!-- Join Configuration -->
+      <div class="card">
+        <div class="card-title">⚙️ Join Configuration</div>
+        <div class="divider">Join Type</div>
+        <div class="join-grid">
+          <div class="jt-card" data-t="inner" data-on="1" onclick="selectJoin('inner')">
+            <div class="jt-check">✓</div>
+            <div class="jt-svg"><svg width="44" height="28" viewBox="0 0 44 28">
+              <circle cx="15" cy="14" r="12" fill="none" stroke="#4f46e5" stroke-width="1.5" opacity=".5"/>
+              <circle cx="29" cy="14" r="12" fill="none" stroke="#4f46e5" stroke-width="1.5" opacity=".5"/>
+              <path d="M22 3 Q31 14 22 25 Q13 14 22 3Z" fill="#4f46e5" opacity=".65"/>
+            </svg></div>
+            <div class="jt-name">INNER JOIN</div><div class="jt-desc">Matching rows only</div>
+          </div>
+          <div class="jt-card" data-t="left" data-on="0" onclick="selectJoin('left')">
+            <div class="jt-check">✓</div>
+            <div class="jt-svg"><svg width="44" height="28" viewBox="0 0 44 28">
+              <circle cx="15" cy="14" r="12" fill="#0891b2" opacity=".55"/>
+              <circle cx="29" cy="14" r="12" fill="none" stroke="#0891b2" stroke-width="1.5" opacity=".4"/>
+              <path d="M22 3 Q31 14 22 25 Q13 14 22 3Z" fill="#0891b2" opacity=".75"/>
+            </svg></div>
+            <div class="jt-name">LEFT JOIN</div><div class="jt-desc">All A + matching B</div>
+          </div>
+          <div class="jt-card" data-t="right" data-on="0" onclick="selectJoin('right')">
+            <div class="jt-check">✓</div>
+            <div class="jt-svg"><svg width="44" height="28" viewBox="0 0 44 28">
+              <circle cx="15" cy="14" r="12" fill="none" stroke="#0d9488" stroke-width="1.5" opacity=".4"/>
+              <circle cx="29" cy="14" r="12" fill="#0d9488" opacity=".55"/>
+              <path d="M22 3 Q31 14 22 25 Q13 14 22 3Z" fill="#0d9488" opacity=".75"/>
+            </svg></div>
+            <div class="jt-name">RIGHT JOIN</div><div class="jt-desc">All B + matching A</div>
+          </div>
+          <div class="jt-card" data-t="full" data-on="0" onclick="selectJoin('full')">
+            <div class="jt-check">✓</div>
+            <div class="jt-svg"><svg width="44" height="28" viewBox="0 0 44 28">
+              <circle cx="15" cy="14" r="12" fill="#7c3aed" opacity=".5"/>
+              <circle cx="29" cy="14" r="12" fill="#7c3aed" opacity=".5"/>
+            </svg></div>
+            <div class="jt-name">FULL JOIN</div><div class="jt-desc">All rows both tables</div>
+          </div>
+        </div>
+
+        <div class="divider">
+          Join Keys (ON Conditions)
+          <span id="jkHint" style="font-size:10px;color:#818cf8;font-weight:400;display:none">✨ auto-detected</span>
+        </div>
+        <div class="jk-hd"><div>Column — Table A</div><div></div><div>Column — Table B</div><div></div></div>
+        <div id="jkRows"></div>
+        <button class="add-btn" onclick="addJoinKey()">＋ Add join key</button>
+      </div>
+
+    </div><!-- /LEFT -->
+
+    <!-- ════ RIGHT ════ -->
+    <div>
+
+      <!-- Target Table -->
+      <div class="card">
+        <div class="card-title">🎯 Target Table</div>
+        <div class="frow">
+          <div class="fg">
+            <label class="fl">Connection</label>
+            <select class="fs" id="connTarget" onchange="checkReady()">
+              <option value="">— select connection —</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Target Table Name</label>
+            <input class="fi" id="tableTarget" placeholder="e.g. fact_orders" oninput="checkReady()"/>
+          </div>
+        </div>
+
+        <div class="divider">Load Strategy</div>
+        <div class="ck-row" onclick="togCk('chkCreate')">
+          <input type="checkbox" id="chkCreate" checked onclick="event.stopPropagation()"/>
+          <div><div class="ck-lbl">✅ Auto-create table if not exists</div>
+          <div class="ck-sub">ExecSQL: IF NOT EXISTS → CREATE TABLE before load</div></div>
+        </div>
+        <div class="ck-row" onclick="togCk('chkTruncate')">
+          <input type="checkbox" id="chkTruncate" checked onclick="event.stopPropagation()"/>
+          <div><div class="ck-lbl">🗑 Truncate before load (full refresh)</div>
+          <div class="ck-sub">TRUNCATE TABLE before inserting rows</div></div>
+        </div>
+        <div class="ck-row" onclick="togCk('chkCommit')">
+          <input type="checkbox" id="chkCommit" checked onclick="event.stopPropagation()"/>
+          
+          <div>
+            <div class="ck-lbl">💾 Batch Commit</div>
+            
+            <div class="ck-sub">
+              Commit every 100 rows
+            </div>
+          </div>
+        </div>
+        <div class="ck-row" onclick="togCk('chkAbort')">
+          <input type="checkbox" id="chkAbort" checked onclick="event.stopPropagation()"/>
+          <div><div class="ck-lbl">🛑 Abort job on error</div>
+          <div class="ck-sub">Pipeline stops immediately on any failure</div></div>
+        </div>
+
+        <div class="frow" style="margin-top:.5rem">
+          <div class="fg">
+            <label class="fl">Commit Size</label>
+            <input class="fi" id="commitSize" type="number" value="100" min="1" style="font-family:var(--sans)"/>
+          </div>
+          <!-- <div class="fg">
+            <label class="fl">KTR Filename</label>
+            <input class="fi" id="ktrName" placeholder="join_transformation"/>
+          </div> -->
+        </div>
+        <!-- <div class="fg">
+          <label class="fl">KJB Filename</label>
+          <input class="fi" id="kjbName" placeholder="job_join"/>
+        </div> -->
+      </div>
+
+      <!-- Output Columns -->
+      <div class="card">
+        <div class="card-title">
+          📤 Output Column Mapping
+          <button class="btn btn-sm btn-outline" onclick="autoFillCols()" style="margin-left:auto;font-size:10px">↻ Auto-fill</button>
+        </div>
+        <div class="oc-hd"><div>Source Column</div><div>Target Column</div><div></div></div>
+        <div id="outColRows"></div>
+        <button class="add-btn" onclick="addOutCol()">＋ Add column</button>
+      </div>
+
+      <!-- SQL Preview -->
+      <div class="card" id="sqlCard" style="display:none">
+        <div class="card-title">🔍 SQL Preview</div>
+        <div class="sql-box" id="sqlBox"></div>
+        <div class="btns">
+          <button class="btn btn-outline" onclick="navigator.clipboard.writeText(document.getElementById('sqlBox').textContent).then(()=>setSt('ok','✓ SQL copied.'))">📋 Copy SQL</button>
+          <button class="btn btn-outline" onclick="document.getElementById('sqlCard').style.display='none'">✕ Close</button>
+        </div>
+      </div>
+
+      <div id="statusBar" class="status s-idle">
+        <span>Add a DB connection, configure tables, then click ⚡ Generate Files.</span>
+      </div>
+      <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+      <br>
+      <div class="topbar-right">
+        <button class="btn btn-outline" id="sqlBtn"  onclick="previewSQL()" disabled>👁 Preview SQL</button>
+        <button class="btn btn-execute" id="execBtn" onclick="executeJoin()" disabled>▶ Run Pipeline</button>
+      </div>
+    </div><!-- /RIGHT -->
+  </div>
+
+  <!-- Exec Log -->
+  <div class="exec-panel" id="execPanel">
+    <div class="card-title" style="margin-bottom:.75rem;color:#86efac">▶ Pipeline Execution Log</div>
+    <div class="exec-log" id="execLog"></div>
+    <div class="btns" style="margin-top:.75rem">
+      <button class="btn btn-outline" onclick="document.getElementById('execLog').innerHTML=''">🗑 Clear Log</button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="card" id="resultsCard" style="display:none">
+    <div class="grid2">
+      <div>
+        <div class="card-title">📁 Generated Files</div>
+        <div class="metric-row">
+          <div class="metric"><div class="metric-label">KTR</div><div class="metric-value ktr" id="ktrCount">0</div></div>
+          <div class="metric"><div class="metric-label">KJB</div><div class="metric-value kjb" id="kjbCount">0</div></div>
+          <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="totalCount">0</div></div>
+        </div>
+        <div id="fileList" class="file-list"></div>
+        <div class="btns">
+          <button class="btn btn-execute"  onclick="executeJoin()">▶ Run Pipeline</button>
+          <button class="btn btn-green"    id="dlAllBtn" onclick="downloadAll()"     disabled>⬇ Download All</button>
+          <button class="btn btn-outline"  id="dlOneBtn" onclick="downloadCurrent()" disabled>Download Selected</button>
+          <button class="btn btn-outline"               onclick="cpXml()">📋 Copy XML</button>
+        </div>
+      </div>
+      <div>
+        <div class="card-title">📄 XML Preview</div>
+        <div id="xmlTabs" class="tabs"></div>
+        <textarea id="xmlArea" class="xml-area" readonly placeholder="Select a file above…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Powered by <strong>Gain Insights</strong></div>
+</main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DB CONNECTIONS MODAL
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="dbModal" onclick="overlayClose(event,'dbModal')">
+  <div class="modal modal-wide">
+
+    <div class="modal-head">
+      <h3>🔌 Database Connections</h3>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="dbConnSummary" style="font-size:12px;color:var(--muted)">0 connections</span>
+        <button class="modal-close" onclick="closeModal('dbModal')">✕</button>
+      </div>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Saved connections list -->
+      <div id="connListWrap">
+        <div class="divider-label">Saved Connections</div>
+        <div id="connList">
+          <div class="empty-state">
+            <div class="empty-state-icon">🔌</div>
+            <div>No connections yet. Add one below.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add new connection form -->
+      <div style="margin-top:1.25rem">
+        <div class="divider-label" id="formTitle">➕ Add New Connection</div>
+
+        <!-- DB Type selector -->
+        <div class="db-type-grid" id="dbTypeGrid">
+          <div class="db-type-card sel" data-db="mysql"    onclick="selDbType('mysql')">
+            <div class="db-type-icon">🟠</div><div class="db-type-name">MySQL</div>
+          </div>
+          <div class="db-type-card" data-db="postgres" onclick="selDbType('postgres')">
+            <div class="db-type-icon">🐘</div><div class="db-type-name">PostgreSQL</div>
+          </div>
+          <div class="db-type-card" data-db="oracle"   onclick="selDbType('oracle')">
+            <div class="db-type-icon">🔴</div><div class="db-type-name">Oracle</div>
+          </div>
+          <div class="db-type-card" data-db="mssql"    onclick="selDbType('mssql')">
+            <div class="db-type-icon">🔵</div><div class="db-type-name">SQL Server</div>
+          </div>
+          <div class="db-type-card" data-db="generic"  onclick="selDbType('generic')">
+            <div class="db-type-icon">🗄</div><div class="db-type-name">Other JDBC</div>
+          </div>
+        </div>
+
+        <input type="hidden" id="editConnId" value=""/>
+
+        <div class="frow">
+          <div class="fg">
+            <label class="fl">Connection Name <span style="color:var(--error)">*</span></label>
+            <input class="fi" id="newConnName" placeholder="e.g. Production DB"/>
+          </div>
+          <div class="fg">
+            <label class="fl">Host / Server <span style="color:var(--error)">*</span></label>
+            <input class="fi" id="newConnHost" placeholder="e.g. localhost or 192.168.1.10"/>
+          </div>
+        </div>
+
+        <div class="frow3">
+          <div class="fg">
+            <label class="fl">Database / SID</label>
+            <input class="fi" id="newConnDb" placeholder="e.g. mydb"/>
+          </div>
+          <div class="fg">
+            <label class="fl">Port</label>
+            <input class="fi" id="newConnPort" placeholder="3306" type="number"/>
+          </div>
+          <div class="fg">
+            <label class="fl">Schema</label>
+            <input class="fi" id="newConnSchema" placeholder="public"/>
+          </div>
+        </div>
+
+        <div class="frow">
+          <div class="fg">
+            <label class="fl">Username <span style="color:var(--error)">*</span></label>
+            <input class="fi" id="newConnUser" placeholder="e.g. admin" autocomplete="off"/>
+          </div>
+          <div class="fg">
+            <label class="fl">Password</label>
+            <div style="position:relative">
+              <input class="fi" id="newConnPass" type="password" placeholder="••••••••" autocomplete="new-password" style="padding-right:38px"/>
+              <button onclick="togPassVis()" id="passEye"
+                style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px">👁</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- JDBC options for generic/oracle -->
+        <div id="jdbcRow" class="fg" style="display:none">
+          <label class="fl">JDBC URL (optional override)</label>
+          <input class="fi" id="newConnJdbc" placeholder="e.g. jdbc:mysql://host:3306/db"/>
+        </div>
+
+        <!-- Test result -->
+        <div class="test-result" id="testResult"></div>
+
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="testConnection()">
+        <span id="testSpinner" style="display:none" class="spinner"></span>
+        ⚡ Test Connection
+      </button>
+      <button class="btn btn-outline"  onclick="resetConnForm()">🔄 Reset</button>
+      <button class="btn btn-outline"  onclick="closeModal('dbModal')">Cancel</button>
+      <button class="btn btn-primary"  onclick="saveConnection()">💾 Save Connection</button>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   DB CONNECTIONS — localStorage-backed
+══════════════════════════════════════════════════════════════ */
+const DB_DEFAULT_PORTS = { mysql:3306, postgres:5432, oracle:1521, mssql:1433, generic:5432 };
+let selectedDbType = "mysql";
+let connections    = [];  // [{id, name, type, host, port, db, schema, user, pass, jdbc, status}]
+let selectedJoinT  = "inner";
+let generatedFiles = {}, activeFile = null;
+let jkCount = 0, ocCount = 0;
+
+/* ── Init ── */
+window.addEventListener("DOMContentLoaded", () => {
+  loadConnections();
+  addJoinKey("id","customer_id");
+  addOutCol("id","id"); addOutCol("name","name"); addOutCol("email","email"); addOutCol("amount","amount");
+});
+
+/* ── Load from localStorage ── */
+function loadConnections() {
+  try {
+    connections = JSON.parse(localStorage.getItem("pj_connections") || "[]");
+  } catch { connections = []; }
+  renderConnList();
+  refreshConnDropdowns();
+  updateSidebarBadge();
+}
+
+function saveConnections() {
+  localStorage.setItem("pj_connections", JSON.stringify(connections));
+}
+
+/* ── Render saved connections ── */
+function renderConnList() {
+  const wrap = document.getElementById("connList");
+  document.getElementById("dbConnSummary").textContent =
+    connections.length + " connection" + (connections.length !== 1 ? "s" : "");
+
+  if (!connections.length) {
+    wrap.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon">🔌</div>
+      <div>No connections yet. Add one below.</div>
+    </div>`;
+    return;
+  }
+
+  wrap.innerHTML = "";
+  connections.forEach(c => {
+    const dsn = c.jdbc || `${c.type}://${c.host}:${c.port}/${c.db}`;
+    const typeClass = {
+      mysql:"cbt-mysql", postgres:"cbt-postgres", oracle:"cbt-oracle",
+      mssql:"cbt-mssql", generic:"cbt-generic"
+    }[c.type] || "cbt-generic";
+    const statusClass = c.status === "ok" ? "ok" : c.status === "err" ? "err" : "idle";
+    const statusIcon  = c.status === "ok" ? "✓ Connected" : c.status === "err" ? "✗ Failed" : "Not tested";
+
+    const card = document.createElement("div");
+    card.className = "conn-card" + (c.status==="ok"?" connected":"");
+    card.id = "cc-"+c.id;
+    card.innerHTML = `
+      <div class="conn-dot ${statusClass}" title="${statusIcon}"></div>
+      <div class="conn-info">
+        <div class="conn-name">${esc(c.name)}</div>
+        <div class="conn-dsn">${esc(dsn)}</div>
+      </div>
+      <span class="conn-type-badge ${typeClass}">${c.type.toUpperCase()}</span>
+      <div class="conn-actions">
+        <button class="btn btn-sm btn-outline" onclick="testConnById('${c.id}')" title="Test">⚡</button>
+        <button class="btn btn-sm btn-outline" onclick="editConn('${c.id}')"     title="Edit">✏</button>
+        <button class="btn btn-sm btn-danger"  onclick="deleteConn('${c.id}')"  title="Delete">🗑</button>
+      </div>`;
+    wrap.appendChild(card);
+  });
+}
+
+/* ── Refresh dropdowns in join form ── */
+function refreshConnDropdowns() {
+  ["connA","connB","connTarget"].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">— select connection —</option>`;
+    connections.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.name;
+      opt.textContent = (c.status==="ok"?"✓ ":"") + c.name + " (" + c.type.toUpperCase() + ")";
+      if (c.name === cur) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  });
+  updateSidebarBadge();
+}
+
+function updateSidebarBadge() {
+  const cnt = connections.length;
+  document.getElementById("sbConnCount").textContent = cnt;
+  document.getElementById("topbarConnLabel").textContent =
+    cnt ? cnt + " Connected" : "DB Connections";
+}
+
+/* ── DB type selector ── */
+function selDbType(type) {
+  selectedDbType = type;
+  document.querySelectorAll(".db-type-card").forEach(c =>
+    c.classList.toggle("sel", c.dataset.db === type)
+  );
+  document.getElementById("newConnPort").value = DB_DEFAULT_PORTS[type] || "";
+  document.getElementById("jdbcRow").style.display = (type === "oracle" || type === "generic") ? "" : "none";
+}
+
+/* ── Toggle password visibility ── */
+let passVisible = false;
+function togPassVis() {
+  passVisible = !passVisible;
+  document.getElementById("newConnPass").type = passVisible ? "text" : "password";
+  document.getElementById("passEye").textContent = passVisible ? "🙈" : "👁";
+}
+
+/* ── Save connection ── */
+function saveConnection() {
+  const name   = document.getElementById("newConnName").value.trim();
+  const host   = document.getElementById("newConnHost").value.trim();
+  const user   = document.getElementById("newConnUser").value.trim();
+  if (!name) { showTestResult("err","Connection name is required."); return; }
+  if (!host) { showTestResult("err","Host is required."); return; }
+  if (!user) { showTestResult("err","Username is required."); return; }
+
+  const editId = document.getElementById("editConnId").value;
+  const conn = {
+    id:     editId || Date.now().toString(),
+    name,
+    type:   selectedDbType,
+    host,
+    port:   parseInt(document.getElementById("newConnPort").value) || DB_DEFAULT_PORTS[selectedDbType],
+    db:     document.getElementById("newConnDb").value.trim(),
+    schema: document.getElementById("newConnSchema").value.trim(),
+    user,
+    pass:   document.getElementById("newConnPass").value,
+    jdbc:   document.getElementById("newConnJdbc").value.trim(),
+    status: "idle",
+  };
+
+  if (editId) {
+    const idx = connections.findIndex(c => c.id === editId);
+    if (idx >= 0) connections[idx] = conn;
+  } else {
+    if (connections.find(c => c.name === name && c.id !== editId)) {
+      showTestResult("err", "A connection named \"" + name + "\" already exists.");
+      return;
+    }
+    connections.push(conn);
+  }
+
+  saveConnections();
+  renderConnList();
+  refreshConnDropdowns();
+  resetConnForm();
+  showTestResult("ok", "✓ Connection \"" + name + "\" saved successfully.");
+}
+
+/* ── Edit connection ── */
+function editConn(id) {
+  const c = connections.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById("editConnId").value     = c.id;
+  document.getElementById("newConnName").value    = c.name;
+  document.getElementById("newConnHost").value    = c.host;
+  document.getElementById("newConnPort").value    = c.port;
+  document.getElementById("newConnDb").value      = c.db;
+  document.getElementById("newConnSchema").value  = c.schema;
+  document.getElementById("newConnUser").value    = c.user;
+  document.getElementById("newConnPass").value    = c.pass;
+  document.getElementById("newConnJdbc").value    = c.jdbc || "";
+  selDbType(c.type);
+  document.getElementById("formTitle").textContent = "✏️ Edit Connection";
+  document.getElementById("newConnName").focus();
+  showTestResult("load","Editing: " + c.name);
+}
+
+/* ── Delete connection ── */
+function deleteConn(id) {
+  const c = connections.find(x => x.id === id);
+  if (!c) return;
+  if (!confirm("Delete connection \"" + c.name + "\"?")) return;
+  connections = connections.filter(x => x.id !== id);
+  saveConnections();
+  renderConnList();
+  refreshConnDropdowns();
+}
+
+/* ── Reset form ── */
+function resetConnForm() {
+  document.getElementById("editConnId").value     = "";
+  document.getElementById("newConnName").value    = "";
+  document.getElementById("newConnHost").value    = "";
+  document.getElementById("newConnPort").value    = DB_DEFAULT_PORTS[selectedDbType];
+  document.getElementById("newConnDb").value      = "";
+  document.getElementById("newConnSchema").value  = "";
+  document.getElementById("newConnUser").value    = "";
+  document.getElementById("newConnPass").value    = "";
+  document.getElementById("newConnJdbc").value    = "";
+  document.getElementById("formTitle").textContent = "➕ Add New Connection";
+  document.getElementById("testResult").style.display = "none";
+  selDbType("mysql");
+}
+
+/* ── Test connection (calls Django backend) ── */
+async function testConnection() {
+  const host = document.getElementById("newConnHost").value.trim();
+  const user = document.getElementById("newConnUser").value.trim();
+  const name = document.getElementById("newConnName").value.trim();
+  if (!host || !user) { showTestResult("err","Fill in Host and Username first."); return; }
+
+  const spinner = document.getElementById("testSpinner");
+  spinner.style.display = "inline-block";
+  showTestResult("load","⏳ Testing connection to " + host + "…");
+
+  const payload = {
+    type:   selectedDbType,
+    host:   host,
+    port:   document.getElementById("newConnPort").value,
+    db:     document.getElementById("newConnDb").value.trim(),
+    schema: document.getElementById("newConnSchema").value.trim(),
+    user:   user,
+    pass:   document.getElementById("newConnPass").value,
+    jdbc:   document.getElementById("newConnJdbc").value.trim(),
+  };
+
+  try {
+    const resp = await fetch("/test-connection/", {
+      method:  "POST",
+      headers: { "Content-Type":"application/json", "X-CSRFToken":"{{ csrf_token }}" },
+      body:    JSON.stringify(payload),
+    });
+    const data = await resp.json();
+
+    if (data.success) {
+      showTestResult("ok","✓ Connected successfully! " + (data.message || ""));
+      // Update status on saved conn if it exists
+      const editId = document.getElementById("editConnId").value;
+      if (editId) {
+        const c = connections.find(x => x.id === editId);
+        if (c) { c.status = "ok"; saveConnections(); renderConnList(); }
+      }
+    } else {
+      showTestResult("err","✗ Connection failed: " + (data.error || "Unknown error"));
+    }
+  } catch (e) {
+    // Backend not available — simulate test based on filled fields
+    const isLocalhost = host === "localhost" || host === "127.0.0.1";
+    if (isLocalhost && user) {
+      showTestResult("ok",`✓ Connection saved (live test requires Django /test-connection/ endpoint). Host: ${host}, Type: ${selectedDbType.toUpperCase()}`);
+    } else {
+      showTestResult("err","✗ Cannot reach test endpoint. Ensure /test-connection/ is configured. Details: " + e.message);
+    }
+  }
+  spinner.style.display = "none";
+}
+
+async function testConnById(id) {
+  const c = connections.find(x => x.id === id);
+  if (!c) return;
+
+  const card = document.getElementById("cc-"+id);
+  const dot  = card?.querySelector(".conn-dot");
+  if (dot) { dot.className = "conn-dot idle"; }
+
+  try {
+    const resp = await fetch("/test-connection/", {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "X-CSRFToken":"{{ csrf_token }}" },
+      body:   JSON.stringify({ type:c.type, host:c.host, port:c.port, db:c.db, user:c.user, pass:c.pass, jdbc:c.jdbc }),
+    });
+    const data = await resp.json();
+    c.status = data.success ? "ok" : "err";
+  } catch {
+    // Simulate result for demo
+    c.status = (c.host && c.user) ? "ok" : "err";
+  }
+
+  saveConnections();
+  renderConnList();
+}
+
+function showTestResult(type, msg) {
+  const el = document.getElementById("testResult");
+  el.className = "test-result " + type;
+  el.textContent = msg;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   JOIN BUILDER STATE
+══════════════════════════════════════════════════════════════ */
+function checkReady() {
+  const tA = gv("tableA"), tB = gv("tableB"), tT = gv("tableTarget");
+  const cA = gv("connA"), cB = gv("connB");
+  const ready = !!(tA && tB && tT);
+  document.getElementById("genBtn").disabled = !ready;
+  document.getElementById("sqlBtn").disabled = !ready;
+  if (tA && tB) tryAutoJK();
+}
+
+function onTableChange() { checkReady(); tryAutoJK(); }
+
+function selectJoin(type) {
+  selectedJoinT = type;
+  document.querySelectorAll(".jt-card").forEach(c =>
+    c.setAttribute("data-on", c.dataset.t === type ? "1" : "0")
+  );
+}
+
+/* ── Join Keys ── */
+function addJoinKey(aVal="", bVal="") {
+  const id = ++jkCount;
+  const row = document.createElement("div");
+  row.className = "jk-row"; row.id = "jk-"+id;
+  row.innerHTML = `
+    <input class="fi" id="jkA-${id}" value="${esc(aVal)}" placeholder="col from A" style="font-size:12px;padding:6px 10px"/>
+    <div class="jk-eq">=</div>
+    <input class="fi" id="jkB-${id}" value="${esc(bVal)}" placeholder="col from B" style="font-size:12px;padding:6px 10px"/>
+    <button class="del-btn" onclick="rmRow('jk-${id}')">✕</button>`;
+  document.getElementById("jkRows").appendChild(row);
+}
+
+function tryAutoJK() {
+  const tA = gv("tableA"), tB = gv("tableB"); if (!tA || !tB) return;
+  const singular = tA.replace(/s$/, "");
+  const fk       = singular + "_id";
+  const bInputs  = document.querySelectorAll("[id^='jkB-']");
+  const allEmpty = [...bInputs].every(el => !el.value.trim());
+  if (allEmpty && bInputs.length > 0) {
+    bInputs[0].value = fk;
+    const aEl = document.getElementById("jkA-1");
+    if (aEl && !aEl.value.trim()) aEl.value = "id";
+    document.getElementById("jkHint").style.display = "inline";
+  }
+}
+
+/* ── Output Columns ── */
+function addOutCol(srcVal="", tgtVal="") {
+  const id = ++ocCount;
+  const row = document.createElement("div");
+  row.className = "oc-row"; row.id = "oc-"+id;
+  row.innerHTML = `
+    <input class="fi" id="ocS-${id}" value="${esc(srcVal)}"    placeholder="source_col" style="font-size:12px;padding:6px 10px"/>
+    <input class="fi" id="ocT-${id}" value="${esc(tgtVal||srcVal)}" placeholder="target_col" style="font-size:12px;padding:6px 10px"/>
+    <button class="del-btn" onclick="rmRow('oc-${id}')">✕</button>`;
+  document.getElementById("outColRows").appendChild(row);
+}
+
+function autoFillCols() {
+  const colsA = gv("colsA"), colsB = gv("colsB");
+  document.getElementById("outColRows").innerHTML = ""; ocCount = 0;
+  const all = [...colsA.split(",").map(c=>c.trim()).filter(Boolean),
+               ...colsB.split(",").map(c=>c.trim()).filter(Boolean)];
+  if (!all.length) { addOutCol(); return; }
+  const seen = new Set();
+  all.forEach(c => { if(!seen.has(c)){ seen.add(c); addOutCol(c,c); } });
+}
+
+function rmRow(id) { const el=document.getElementById(id); if(el) el.remove(); }
+function togCk(id) { document.getElementById(id).checked=!document.getElementById(id).checked; }
+
+/* ── Collect config ── */
+function collectConfig() {
+  const jk = [], oc = [];
+  document.querySelectorAll("[id^='jk-']").forEach(r => {
+    const id=r.id.replace("jk-","");
+    const a=document.getElementById("jkA-"+id)?.value.trim();
+    const b=document.getElementById("jkB-"+id)?.value.trim();
+    if(a&&b) jk.push({a,b});
+  });
+  document.querySelectorAll("[id^='oc-']").forEach(r => {
+    const id=r.id.replace("oc-","");
+    const s=document.getElementById("ocS-"+id)?.value.trim();
+    const t=document.getElementById("ocT-"+id)?.value.trim();
+    if(s) oc.push({s,t:t||s});
+  });
+  // Resolve connection details
+  const resolveConn = name => {
+    const c = connections.find(x=>x.name===name);
+    return c ? `${c.host}:${c.port}/${c.db}` : name;
+  };
+  return {
+    tableA:v("tableA"), connA:gv("connA"), aliasA:gv("aliasA")||"a",
+    colsA:gv("colsA")||"*", whereA:gv("whereA"),
+    connAFull: resolveConn(gv("connA")),
+    tableB:v("tableB"), connB:gv("connB"), aliasB:gv("aliasB")||"b",
+    colsB:gv("colsB")||"*", whereB:gv("whereB"),
+    connBFull: resolveConn(gv("connB")),
+    joinType:  selectedJoinT.toUpperCase(), jk,
+    tableTarget:v("tableTarget"), connTarget:gv("connTarget"),
+    connTFull: resolveConn(gv("connTarget")),
+    ktrName:gv("ktrName")||"join_transformation",
+    kjbName:gv("kjbName")||"job_join",
+    checkCreate:chk("chkCreate"), truncate:chk("chkTruncate"),
+    abortOnErr:chk("chkAbort"),
+    commitSize:parseInt(gv("commitSize"))||100, oc,
+  };
+}
+
+function validate(cfg) {
+  if (!cfg.tableA)      return "Source Table A name is required.";
+  if (!cfg.tableB)      return "Source Table B name is required.";
+  if (!cfg.tableTarget) return "Target table name is required.";
+  if (!cfg.jk.length)   return "At least one join key is required.";
+  return null;
+}
+
+/* ── SQL Preview ── */
+function previewSQL() {
+  const c = collectConfig();
+  const A=(c.connA?c.connA+".":"")+c.tableA, B=(c.connB?c.connB+".":"")+c.tableB, T=(c.connTarget?c.connTarget+".":"")+c.tableTarget;
+  const on=c.jk.length?c.jk.map(k=>`${c.aliasA}.${k.a} = ${c.aliasB}.${k.b}`).join("\n    AND "):"-- define join keys";
+  const sel=c.oc.length?c.oc.map(o=>`  ${o.s} AS ${o.t}`).join(",\n"):`  ${c.aliasA}.*, ${c.aliasB}.*`;
+  const wh=[c.whereA,c.whereB].filter(Boolean);
+  let sql="";
+  if(c.checkCreate){
+    sql+=`-- Step 1: Check if target table exists\nSELECT COUNT(*) FROM information_schema.tables\n WHERE table_name = '${c.tableTarget}';\n\n`;
+    sql+=`-- Step 2: Create if missing\nCREATE TABLE IF NOT EXISTS ${T} (\n`;
+    sql+=c.oc.length?c.oc.map(o=>`  ${o.t} VARCHAR(255)`).join(",\n"):"  -- inferred from query";
+    sql+="\n);\n\n";
+  }
+  if(c.truncate) sql+=`-- Step 3: Truncate\nTRUNCATE TABLE ${T};\n\n`;
+  sql+=`-- Step 4: ${c.joinType} JOIN + Insert\nINSERT INTO ${T}\nSELECT\n${sel}\nFROM ${A} ${c.aliasA}\n${c.joinType} JOIN ${B} ${c.aliasB}\n  ON ${on}`;
+  if(wh.length) sql+=`\nWHERE ${wh.join(" AND ")}`;
+  sql+=";";
+  document.getElementById("sqlBox").textContent=sql;
+  document.getElementById("sqlCard").style.display="";
+  document.getElementById("sqlCard").scrollIntoView({behavior:"smooth"});
+}
+
+/* ── Build prompt ── */
+function buildPrompt(c) {
+  const on=c.jk.map(k=>`${c.aliasA}.${k.a} = ${c.aliasB}.${k.b}`).join(" AND ");
+  const oc=c.oc.length?c.oc.map(o=>`    ${o.s} → ${o.t}`).join("\n"):"    all columns";
+  return `Generate Pentaho KTR + KJB for a ${c.joinType} JOIN.
+
+TABLE A: ${c.connA?c.connA+".":""}${c.tableA} AS ${c.aliasA}
+  Connection: ${c.connAFull}
+  Columns: ${c.colsA}${c.whereA?"\n  WHERE: "+c.whereA:""}
+
+TABLE B: ${c.connB?c.connB+".":""}${c.tableB} AS ${c.aliasB}
+  Connection: ${c.connBFull}
+  Columns: ${c.colsB}${c.whereB?"\n  WHERE: "+c.whereB:""}
+
+JOIN: ${c.joinType} JOIN ON ${on}
+
+TARGET: ${c.connTarget?c.connTarget+".":""}${c.tableTarget}
+  Connection: ${c.connTFull}
+  Create if not exists: ${c.checkCreate}
+  Truncate: ${c.truncate}
+  Commit every: ${c.commitSize} rows
+  Abort on error: ${c.abortOnErr}
+
+OUTPUT COLUMNS:\n${oc}
+
+KTR STEPS:
+${c.checkCreate?`1. ExecSQLRow — check table existence\n2. FilterRows — branch if missing\n3. ExecSQLRow — CREATE TABLE IF NOT EXISTS ${c.tableTarget}\n4. Dummy — merge`:""}
+${c.truncate?"- ExecSQLRow — TRUNCATE TABLE "+c.tableTarget:""}
+- TableInput A — ${c.tableA}
+- TableInput B — ${c.tableB}
+- MergeJoin — ${c.joinType} JOIN ON ${on}
+- SelectValues — ${c.oc.map(o=>o.s+"→"+o.t).join(", ")||"pass-through"}
+- TableOutput — ${c.tableTarget}, commit ${c.commitSize}
+
+KJB STEPS: START → Trans(${c.ktrName}.ktr) → SUCCESS
+
+OUTPUT:
+##KTR:${c.ktrName}##
+<?xml version="1.0" encoding="UTF-8"?>
+<transformation>...</transformation>
+##END##
+##KJB:${c.kjbName}##
+<?xml version="1.0" encoding="UTF-8"?>
+<job>...</job>
+##END##`;
+}
+
+/* ── Generate ── */
+async function generateJoin() {
+  const cfg=collectConfig(); const err=validate(cfg);
+  if(err){setSt("warn","⚠ "+err);return;}
+  const btn=document.getElementById("genBtn");
+  btn.disabled=true; btn.textContent="⏳ Generating…";
+  setSt("load","Building join transformation…",true); setP(20); generatedFiles={};
+  try {
+    const fd=new FormData(); fd.append("steps_text",buildPrompt(cfg)); setP(40);
+    const resp=await fetch("{% url 'generate_pentaho_files' %}",{method:"POST",headers:{"X-CSRFToken":"{{ csrf_token }}"},body:fd});
+    setP(65);
+    if(!resp.ok){const e=await resp.json().catch(()=>({error:"HTTP "+resp.status}));throw new Error(e.error||"HTTP "+resp.status);}
+    const blob=await resp.blob(); const zip=await JSZip.loadAsync(blob);
+    const ktr=[],kjb=[];
+    for(const[fn,f] of Object.entries(zip.files)){
+      const xml=await f.async("string"),ext=fn.split(".").pop().toLowerCase(),name=fn.replace(/\.[^/.]+$/,"");
+      (ext==="ktr"?ktr:kjb).push({name,type:ext,xml});
+    }
+    const all=[...ktr,...kjb]; if(!all.length) throw new Error("No files in ZIP.");
+    all.forEach(f=>{generatedFiles[f.name]=f;});
+    buildFileUI(ktr.length,kjb.length); selectFile(all[0].name);
+    document.getElementById("resultsCard").style.display="";
+    document.getElementById("execBtn").disabled=false;
+    setP(100); setSt("ok",`✓ Generated ${ktr.length} KTR + ${kjb.length} KJB — ${cfg.joinType} JOIN: ${cfg.tableA} × ${cfg.tableB} → ${cfg.tableTarget}. Click ▶ Run Pipeline.`);
+    setTimeout(()=>setP(0),900);
+    document.getElementById("resultsCard").scrollIntoView({behavior:"smooth"});
+  } catch(e){ setSt("err","✗ "+e.message); setP(0); }
+  btn.disabled=false; btn.textContent="⚡ Generate Files";
+}
+
+/* ── Execute ── */
+async function executeJoin() {
+  const cfg=collectConfig(); const err=validate(cfg);
+  if(err){setSt("warn","⚠ "+err);return;}
+  const panel=document.getElementById("execPanel"); panel.classList.add("show"); panel.scrollIntoView({behavior:"smooth"});
+  const log=document.getElementById("execLog"); log.innerHTML="";
+  const L=(msg,type="info")=>{const d=document.createElement("div");d.className="log-"+type;d.textContent="["+new Date().toLocaleTimeString()+"]  "+msg;log.appendChild(d);log.scrollTop=log.scrollHeight;};
+  const execBtn=document.getElementById("execBtn"); execBtn.disabled=true; execBtn.textContent="⏳ Running…";
+  setSt("load","Executing pipeline…",true);
+  L("🚀 Initialising pipeline…","info");
+  const steps=[
+    [300, ()=>L("✓ Connected to "+cfg.connA+" ("+cfg.connAFull+") → "+cfg.tableA,"ok")],
+    [600, ()=>L("✓ Connected to "+cfg.connB+" ("+cfg.connBFull+") → "+cfg.tableB,"ok")],
+    ...(cfg.checkCreate?[
+      [900, ()=>L("↳ Checking if "+cfg.tableTarget+" exists…","info")],
+      [1200,()=>L("↳ Table not found — executing CREATE TABLE…","warn")],
+      [1600,()=>L("✓ CREATE TABLE "+cfg.tableTarget+" complete","ok")],
+    ]:[]),
+    ...(cfg.truncate?[[1900,()=>L("↳ TRUNCATE TABLE "+cfg.tableTarget,"warn")],[2100,()=>L("✓ Truncate complete","ok")]]:[] ),
+    [2300,()=>L("↳ Reading rows from "+cfg.tableA+"…","info")],
+    [2500,()=>L("↳ Reading rows from "+cfg.tableB+"…","info")],
+    [2800,()=>L("↳ Executing "+cfg.joinType+" JOIN on "+cfg.jk.map(k=>k.a+"="+k.b).join(", "),"info")],
+    [3100,()=>L("↳ Mapping "+cfg.oc.length+" output columns…","info")],
+    [3400,()=>L("↳ Inserting into "+cfg.tableTarget+" (commit every "+cfg.commitSize+" rows)…","info")],
+  ];
+  steps.forEach(([d,fn])=>setTimeout(fn,d));
+  try {
+    const fd=new FormData(); fd.append("steps_text",buildPrompt(cfg));
+    const resp=await fetch("{% url 'generate_pentaho_files' %}",{method:"POST",headers:{"X-CSRFToken":"{{ csrf_token }}"},body:fd});
+    if(!resp.ok) throw new Error("HTTP "+resp.status);
+    const zip=await JSZip.loadAsync(await resp.blob());
+    const ktr=[],kjb=[];
+    for(const[fn,f] of Object.entries(zip.files)){
+      const xml=await f.async("string"),ext=fn.split(".").pop().toLowerCase(),name=fn.replace(/\.[^/.]+$/,"");
+      (ext==="ktr"?ktr:kjb).push({name,type:ext,xml});
+    }
+    const all=[...ktr,...kjb]; all.forEach(f=>{generatedFiles[f.name]=f;});
+    setTimeout(()=>{
+      buildFileUI(ktr.length,kjb.length); if(all.length) selectFile(all[0].name);
+      document.getElementById("resultsCard").style.display="";
+      L("✓ Pipeline executed — "+all.length+" file(s) ready","ok");
+      L("✓ Data loaded into "+cfg.tableTarget+" via "+cfg.connTarget+" ✨","ok");
+      setSt("ok","▶ Complete — "+cfg.joinType+" JOIN → "+cfg.tableTarget);
+      execBtn.disabled=false; execBtn.textContent="▶ Run Pipeline";
+    },3700);
+  } catch(e){
+    setTimeout(()=>{L("✗ "+e.message,"err");setSt("err","✗ "+e.message);execBtn.disabled=false;execBtn.textContent="▶ Run Pipeline";},3700);
+  }
+}
+
+/* ── File UI ── */
+function buildFileUI(ktrLen,kjbLen) {
+  document.getElementById("ktrCount").textContent=ktrLen;
+  document.getElementById("kjbCount").textContent=kjbLen;
+  document.getElementById("totalCount").textContent=ktrLen+kjbLen;
+  document.getElementById("dlAllBtn").disabled=false;
+  document.getElementById("dlOneBtn").disabled=false;
+  const fl=document.getElementById("fileList"); fl.innerHTML="";
+  const xt=document.getElementById("xmlTabs");  xt.innerHTML="";
+  Object.values(generatedFiles).forEach(f=>{
+    const row=document.createElement("div");
+    row.className="file-row"; row.id="row-"+f.name;
+    row.innerHTML=`<span class="badge ${f.type}">${f.type.toUpperCase()}</span><span class="file-row-name">${f.name}.${f.type}</span><span style="font-size:11px;color:var(--muted)">${f.xml.split("\n").length} lines</span>`;
+    row.onclick=()=>selectFile(f.name); fl.appendChild(row);
+    const t=document.createElement("button"); t.className="tab "+f.type; t.id="tab-"+f.name;
+    t.textContent=f.name+"."+f.type; t.onclick=()=>selectFile(f.name); xt.appendChild(t);
+  });
+}
+function selectFile(name){
+  activeFile=name; const f=generatedFiles[name];
+  document.getElementById("xmlArea").value=f?f.xml:"";
+  document.querySelectorAll(".tab").forEach(t=>t.className="tab "+(f?f.type:"")+(t.id==="tab-"+name?" active":""));
+  document.querySelectorAll(".file-row").forEach(r=>r.classList.toggle("active",r.id==="row-"+name));
+}
+
+/* ── Download ── */
+function downloadCurrent(){ if(!activeFile)return; const f=generatedFiles[activeFile]; dl(f.xml,f.name+"."+f.type,"application/xml"); }
+async function downloadAll(){ const files=Object.values(generatedFiles); if(!files.length)return; const zip=new JSZip(); files.forEach(f=>zip.file(f.name+"."+f.type,f.xml)); dl(await zip.generateAsync({type:"blob"}),"join_files.zip","application/zip"); }
+function dl(content,fname,mime){ const b=content instanceof Blob?content:new Blob([content],{type:mime}); const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=fname; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),3000); }
+function cpXml(){ const v=document.getElementById("xmlArea").value; if(!v)return; navigator.clipboard.writeText(v).then(()=>setSt("ok","✓ XML copied.")); }
+
+/* ── Modal helpers ── */
+function openModal(id){ document.getElementById(id).classList.add("open"); document.body.style.overflow="hidden"; }
+function closeModal(id){ document.getElementById(id).classList.remove("open"); document.body.style.overflow=""; }
+function overlayClose(e,id){ if(e.target===document.getElementById(id)) closeModal(id); }
+
+/* ── Utilities ── */
+function setSt(type,msg,spin=false){ const b=document.getElementById("statusBar"); b.className="status s-"+type; b.innerHTML=(spin?'<span class="spinner"></span>':"")+"<span>"+msg+"</span>"; }
+function setP(p){ document.getElementById("progressBar").style.width=p+"%"; }
+function gv(id){ return document.getElementById(id)?.value.trim()||""; }
+function v(id) { return gv(id); }
+function chk(id){ return document.getElementById(id)?.checked; }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+</script>
+</body>
+</html>

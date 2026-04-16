@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gain Insights — AI ETL Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<style>
+/* ── RESET ─────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+
+/* ── TOKENS ─────────────────────────────────────────────────────────── */
+:root{
+  --bg:#07090f;
+  --surface:#0f1219;
+  --border:rgba(255,255,255,.07);
+
+  --pentaho:#4f6ef7;   /* indigo-blue */
+  --pentaho-dim:#2a3b8f;
+  --pentaho-glow:rgba(79,110,247,.35);
+
+  --talend:#f05e23;    /* talend orange */
+  --talend-dim:#8a2f08;
+  --talend-glow:rgba(240,94,35,.35);
+
+  --text:#f0f2f8;
+  --muted:#6b7591;
+  --ff-head:'Syne',sans-serif;
+  --ff-body:'DM Sans',sans-serif;
+}
+
+/* ── BACKGROUND MESH ─────────────────────────────────────────────────── */
+body{
+  background:var(--bg);
+  font-family:var(--ff-body);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+  position:relative;
+  overflow:hidden;
+}
+
+/* animated noise grain overlay */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:.6;
+}
+
+/* two-tone radial glow blobs */
+.blob{
+  position:fixed;border-radius:50%;filter:blur(120px);
+  pointer-events:none;z-index:0;
+}
+.blob-l{
+  width:640px;height:640px;
+  top:-120px;left:-160px;
+  background:radial-gradient(circle,rgba(79,110,247,.18) 0%,transparent 70%);
+  animation:drift 14s ease-in-out infinite alternate;
+}
+.blob-r{
+  width:580px;height:580px;
+  bottom:-80px;right:-100px;
+  background:radial-gradient(circle,rgba(240,94,35,.15) 0%,transparent 70%);
+  animation:drift 18s ease-in-out infinite alternate-reverse;
+}
+@keyframes drift{
+  from{transform:translate(0,0) scale(1);}
+  to  {transform:translate(40px,30px) scale(1.08);}
+}
+
+/* ── LAYOUT ──────────────────────────────────────────────────────────── */
+.page{
+  position:relative;z-index:1;
+  display:flex;flex-direction:column;align-items:center;
+  padding:2.5rem 1.5rem;
+  width:100%;max-width:960px;
+  animation:fadeUp .7s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(28px);}
+  to  {opacity:1;transform:translateY(0);}
+}
+
+/* ── HEADER ──────────────────────────────────────────────────────────── */
+.logo-row{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:3.5rem;
+}
+.logo-mark{
+  width:44px;height:44px;border-radius:12px;
+  background:linear-gradient(135deg,#4f6ef7,#f05e23);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;flex-shrink:0;
+  box-shadow:0 0 24px rgba(79,110,247,.4);
+}
+.logo-text{
+  font-family:var(--ff-head);font-size:1.25rem;font-weight:800;
+  color:var(--text);letter-spacing:-.02em;
+}
+.logo-text span{color:var(--muted);font-weight:400;font-size:.95rem;}
+
+.headline{
+  font-family:var(--ff-head);
+  font-size:clamp(2rem,5vw,3.2rem);
+  font-weight:800;
+  color:var(--text);
+  text-align:center;
+  line-height:1.08;
+  letter-spacing:-.03em;
+  margin-bottom:.9rem;
+}
+.headline em{
+  font-style:normal;
+  background:linear-gradient(90deg,#4f6ef7 30%,#f05e23);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+
+.subhead{
+  font-size:1rem;color:var(--muted);
+  text-align:center;font-weight:300;
+  margin-bottom:3.5rem;
+  max-width:440px;line-height:1.6;
+}
+
+/* ── CARDS ───────────────────────────────────────────────────────────── */
+.cards{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1.25rem;
+  width:100%;
+  max-width:780px;
+}
+@media(max-width:600px){
+  .cards{grid-template-columns:1fr;}
+}
+
+.card{
+  position:relative;
+  border-radius:20px;
+  padding:2.4rem 2rem 2rem;
+  border:1px solid var(--border);
+  background:var(--surface);
+  cursor:pointer;
+  overflow:hidden;
+  transition:transform .3s cubic-bezier(.16,1,.3,1),
+              box-shadow .3s ease,
+              border-color .3s ease;
+  text-decoration:none;
+  display:flex;flex-direction:column;align-items:flex-start;gap:0;
+  animation:fadeUp .7s cubic-bezier(.16,1,.3,1) both;
+}
+.card:nth-child(1){animation-delay:.08s;}
+.card:nth-child(2){animation-delay:.18s;}
+
+/* hover lift */
+.card:hover{
+  transform:translateY(-6px) scale(1.015);
+}
+.card-pentaho:hover{
+  border-color:rgba(79,110,247,.5);
+  box-shadow:0 24px 60px -12px var(--pentaho-glow),
+             0 0 0 1px rgba(79,110,247,.12);
+}
+.card-talend:hover{
+  border-color:rgba(240,94,35,.5);
+  box-shadow:0 24px 60px -12px var(--talend-glow),
+             0 0 0 1px rgba(240,94,35,.12);
+}
+
+/* corner shine sweep on hover */
+.card::before{
+  content:'';
+  position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.06) 0%,transparent 60%);
+  opacity:0;transition:opacity .3s;pointer-events:none;
+}
+.card:hover::before{opacity:1;}
+
+/* top accent bar */
+.card::after{
+  content:'';
+  position:absolute;top:0;left:0;right:0;
+  height:3px;border-radius:20px 20px 0 0;
+  transition:opacity .3s;
+}
+.card-pentaho::after{
+  background:linear-gradient(90deg,#4f6ef7,#7c9dff);
+  opacity:.5;
+}
+.card-pentaho:hover::after{opacity:1;}
+.card-talend::after{
+  background:linear-gradient(90deg,#f05e23,#ffaa6e);
+  opacity:.5;
+}
+.card-talend:hover::after{opacity:1;}
+
+/* icon */
+.card-icon{
+  width:52px;height:52px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;margin-bottom:1.4rem;flex-shrink:0;
+  position:relative;z-index:1;
+}
+.card-pentaho .card-icon{
+  background:rgba(79,110,247,.12);
+  border:1px solid rgba(79,110,247,.22);
+  box-shadow:0 0 20px rgba(79,110,247,.2);
+}
+.card-talend .card-icon{
+  background:rgba(240,94,35,.1);
+  border:1px solid rgba(240,94,35,.22);
+  box-shadow:0 0 20px rgba(240,94,35,.18);
+}
+
+/* label */
+.card-eyebrow{
+  font-size:.68rem;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;margin-bottom:.4rem;
+  position:relative;z-index:1;
+}
+.card-pentaho .card-eyebrow{color:#7c9dff;}
+.card-talend  .card-eyebrow{color:#ffaa6e;}
+
+.card-title{
+  font-family:var(--ff-head);
+  font-size:1.45rem;font-weight:800;
+  color:var(--text);letter-spacing:-.02em;
+  margin-bottom:.55rem;
+  position:relative;z-index:1;
+}
+
+.card-desc{
+  font-size:.875rem;color:var(--muted);line-height:1.6;
+  font-weight:300;flex:1;
+  position:relative;z-index:1;
+}
+
+/* pill tags */
+.tags{
+  display:flex;flex-wrap:wrap;gap:6px;
+  margin-top:1.4rem;
+  position:relative;z-index:1;
+}
+.tag{
+  font-size:.72rem;font-weight:500;
+  padding:3px 10px;border-radius:20px;
+  border:1px solid;
+}
+.card-pentaho .tag{
+  color:#7c9dff;
+  background:rgba(79,110,247,.08);
+  border-color:rgba(79,110,247,.2);
+}
+.card-talend .tag{
+  color:#ffaa6e;
+  background:rgba(240,94,35,.08);
+  border-color:rgba(240,94,35,.2);
+}
+
+/* CTA row */
+.card-cta{
+  display:flex;align-items:center;gap:8px;
+  margin-top:1.8rem;
+  font-size:.875rem;font-weight:600;
+  position:relative;z-index:1;
+  transition:gap .2s;
+}
+.card-pentaho .card-cta{color:#7c9dff;}
+.card-talend  .card-cta{color:#ffaa6e;}
+.card:hover .card-cta{gap:14px;}
+
+.arrow{
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;transition:transform .25s;
+}
+.card-pentaho .arrow{background:rgba(79,110,247,.15);}
+.card-talend  .arrow{background:rgba(240,94,35,.12);}
+.card:hover .arrow{transform:translateX(3px);}
+
+/* ── FOOTER ──────────────────────────────────────────────────────────── */
+.footer{
+  margin-top:3rem;
+  font-size:.78rem;color:var(--muted);
+  text-align:center;letter-spacing:.04em;
+  animation:fadeUp .7s .35s cubic-bezier(.16,1,.3,1) both;
+}
+
+/* ── RIPPLE ON CLICK ─────────────────────────────────────────────────── */
+.ripple{
+  position:absolute;border-radius:50%;
+  transform:scale(0);animation:ripple .55s linear;
+  pointer-events:none;opacity:.18;
+}
+.card-pentaho .ripple{background:#4f6ef7;}
+.card-talend  .ripple{background:#f05e23;}
+@keyframes ripple{
+  to{transform:scale(5);opacity:0;}
+}
+</style>
+</head>
+<body>
+<div class="blob blob-l"></div>
+<div class="blob blob-r"></div>
+
+<div class="page">
+
+  <!-- Logo -->
+  <div class="logo-row">
+    <div class="logo-mark">⚡</div>
+    <div class="logo-text">Gain Insights <span>AI ETL Platform</span></div>
+  </div>
+
+  <!-- Headline -->
+  <h1 class="headline">Choose Your<br/><em>ETL Platform</em></h1>
+  <p class="subhead">Select your platform to continue. Each environment has its own workspace, tools, and AI generator.</p>
+
+  <!-- Cards -->
+  <div class="cards">
+
+    <!-- Pentaho Card -->
+    <a class="card card-pentaho" href="{% url 'pentaho_login' %}" onclick="ripple(event)">
+      <div class="card-icon">🔧</div>
+      <div class="card-eyebrow">ETL Automation</div>
+      <div class="card-title">Pentaho AI</div>
+      <div class="card-desc">
+        Generate <strong style="color:#e8eaf0">.ktr</strong> transformations and <strong style="color:#e8eaf0">.kjb</strong> job files from natural language. AI-powered Kettle automation.
+      </div>
+      <div class="tags">
+        <span class="tag">.ktr</span>
+        <span class="tag">.kjb</span>
+        <span class="tag">Table Builder</span>
+        <span class="tag">SQL Generator</span>
+      </div>
+      <div class="card-cta">
+        Enter Pentaho Workspace
+        <span class="arrow">→</span>
+      </div>
+    </a>
+
+    <!-- Talend Card -->
+    <a class="card card-talend" href="{% url 'talend_login' %}" onclick="ripple(event)">
+      <div class="card-icon">🟠</div>
+      <div class="card-eyebrow">Project Generator</div>
+      <div class="card-title">Talend · Qlik</div>
+      <div class="card-desc">
+        Generate full <strong style="color:#e8eaf0">GAININSIGHTS</strong> project ZIPs with process, context, connections, routines &amp; sqlPatterns — plus Qlik <strong style="color:#e8eaf0">.qvs</strong> scripts.
+      </div>
+      <div class="tags">
+        <span class="tag">Talend 8</span>
+        <span class="tag">.item</span>
+        <span class="tag">Qlik .qvs</span>
+        <span class="tag">Full Project ZIP</span>
+      </div>
+      <div class="card-cta">
+        Enter Talend · Qlik Workspace
+        <span class="arrow">→</span>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="footer">GAININSIGHTS &nbsp;·&nbsp; Powered by Claude AI &nbsp;·&nbsp; Talend Cloud 8.0.1</div>
+</div>
+
+<script>
+function ripple(e) {
+  const card = e.currentTarget;
+  const r = document.createElement('span');
+  const rect = card.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  r.className = 'ripple';
+  r.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - rect.left - size/2}px;top:${e.clientY - rect.top - size/2}px;`;
+  card.appendChild(r);
+  setTimeout(() => r.remove(), 600);
+}
+</script>
+</body>
+</html>

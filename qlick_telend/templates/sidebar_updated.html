@@ -1,0 +1,78 @@
+{# templates/components/sidebar.html — updated with Qlik + Talend links #}
+<aside class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-fb">⚡</div>
+    <div class="sb-logo-t">
+      <h2>Pentaho AI</h2>
+      <p>Gain Insights Platform</p>
+    </div>
+  </div>
+
+  <div class="sb-section">
+    <div class="sb-label">Main</div>
+    <a class="sb-link {% if active_page == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+      <span class="sb-ico">📊</span> Dashboard
+    </a>
+  </div>
+
+  {# ── PENTAHO ───────────────────────────────────────────────────────────── #}
+  <div class="sb-section" style="margin-top:.5rem">
+    <div class="sb-label">🔧 Pentaho</div>
+    <a class="sb-link {% if active_page == 'File_Generator' %}active{% endif %}" href="{% url 'generate_pentaho' %}">
+      <span class="sb-ico">⚙️</span> File Generator
+      <span class="docs-nav-new">AI</span>
+    </a>
+    <a class="sb-link {% if active_page == 'upload_tr' %}active{% endif %}" href="{% url 'upload_tr' %}">
+      <span class="sb-ico">🔄</span> KTR / KJB
+      <span class="docs-nav-old">Old</span>
+    </a>
+  </div>
+
+  {# ── QLIK ─────────────────────────────────────────────────────────────── #}
+  <div class="sb-section" style="margin-top:.5rem">
+    <div class="sb-label">🟢 Qlik</div>
+    <a class="sb-link {% if active_page == 'qlik_generator' %}active{% endif %}" href="{% url 'qlik_generator' %}">
+      <span class="sb-ico">🟢</span> QVS Generator
+      <span class="docs-nav-new">AI</span>
+    </a>
+  </div>
+
+  {# ── TALEND ────────────────────────────────────────────────────────────── #}
+  <div class="sb-section" style="margin-top:.5rem">
+    <div class="sb-label">🟠 Talend</div>
+    <a class="sb-link {% if active_page == 'talend_generator' %}active{% endif %}" href="{% url 'talend_generator' %}">
+      <span class="sb-ico">🟠</span> Job Generator
+      <span class="docs-nav-new">AI</span>
+    </a>
+  </div>
+
+  {# ── TABLE TOOLS ────────────────────────────────────────────────────────── #}
+  <div class="sb-section" style="margin-top:.5rem">
+    <div class="sb-label">🗄 Table Tools</div>
+    <a class="sb-link {% if active_page == 'table_builder' %}active{% endif %}" href="{% url 'table_builder' %}">
+      <span class="sb-ico">🗄</span> Table Builder
+    </a>
+    <a class="sb-link {% if active_page == 'joins' %}active{% endif %}" href="{% url 'table_joins' %}">
+      <span class="sb-ico">🔗</span> Table Join Builder
+    </a>
+  </div>
+
+  {# ── CONFIG ────────────────────────────────────────────────────────────── #}
+  <div class="sb-section" style="margin-top:.5rem">
+    <div class="sb-label">Config</div>
+    <a class="sb-link" href="{% url 'downloads_list' %}">
+      <span class="sb-ico">📁</span> Downloads
+    </a>
+    <a class="sb-link" href="#">
+      <span class="sb-ico">🔑</span> API Settings
+    </a>
+  </div>
+
+  <div class="sb-footer">
+    <p>Model: <strong>{{ model }}</strong></p>
+    <p style="margin-top:4px">Status: <strong style="color:var(--success)">● Ready</strong></p>
+    <a href="{% url 'logout' %}" style="display:block;margin-top:.75rem;font-size:12px;color:var(--muted);text-decoration:none;">
+      ⬅ Sign out
+    </a>
+  </div>
+</aside>

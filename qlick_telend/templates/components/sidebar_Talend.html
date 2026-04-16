@@ -1,0 +1,252 @@
+{% load static %}
+
+<style>
+/* ════════════════════════════════════════════════
+   SIDEBAR — shared scrollbar + layout styles
+   imported once; safe to include on every page
+════════════════════════════════════════════════ */
+
+/* ── Thin scrollbar mixin (reused everywhere) ── */
+.thin-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.thin-scroll::-webkit-scrollbar        { width: 3px; }
+.thin-scroll::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 3px; }
+.thin-scroll::-webkit-scrollbar-track  { background: transparent; }
+
+/* ── Sidebar shell ── */
+.sidebar {
+  width: 226px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+/* ── Fixed logo at top ── */
+.sb-logo {
+  padding: 1.25rem 1.25rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0; /* never scrolls away */
+}
+.sb-logo-fallback {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: rgba(79,70,229,.2); border: 1px solid rgba(79,70,229,.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.sb-logo-text h2 { font-size: 15px; font-weight: 600; color: var(--accent); line-height: 1.2; }
+.sb-logo-text p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── Scrollable nav area ── */
+.sb-nav {
+  flex: 1;
+  min-height: 0;           /* crucial for flex child to scroll */
+  padding: .75rem 0 .5rem;
+}
+
+/* ── Section wrappers ── */
+.sb-section   { padding: 0 .75rem; margin-bottom: .25rem; }
+.sb-label     { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; padding: .5rem .5rem .25rem; }
+
+/* ── Nav links ── */
+.sb-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 8px;
+  font-size: 13px; font-weight: 500; color: var(--muted);
+  text-decoration: none; transition: all .15s;
+  cursor: pointer; border: none; background: none;
+  width: 100%; font-family: var(--sans);
+}
+.sb-link:hover  { background: rgba(79,70,229,.08); color: #a5b4fc; }
+.sb-link.active { background: rgba(79,70,229,.15); color: #a5b4fc; border-left: 2px solid var(--accent); padding-left: 8px; }
+.sb-link .sb-ico   { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+.sb-link .sb-badge { margin-left: auto; background: var(--accent); color: #fff; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 20px; }
+
+/* ── Docs button ── */
+.docs-sb-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  color: #a5b4fc; background: rgba(79,70,229,.1); border: 1px solid rgba(79,70,229,.22);
+  cursor: pointer; transition: all .2s; width: 100%; font-family: var(--sans);
+  position: relative; overflow: hidden; letter-spacing: .01em;
+}
+.docs-sb-btn::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(79,70,229,.15) 50%, transparent 100%);
+  transform: translateX(-100%); transition: transform .55s ease;
+}
+.docs-sb-btn:hover::after  { transform: translateX(100%); }
+.docs-sb-btn:hover { background: rgba(79,70,229,.2); border-color: rgba(79,70,229,.45); color: #c7d2fe; }
+.docs-sb-ico  { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
+.docs-sb-pulse {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--success);
+  margin-left: auto; flex-shrink: 0; box-shadow: 0 0 0 0 rgba(34,197,94,.5);
+  animation: docsPulse 2.2s ease infinite;
+}
+@keyframes docsPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(34,197,94,.55); }
+  65%  { box-shadow: 0 0 0 5px rgba(34,197,94,0); }
+  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0);   }
+}
+
+/* NEW / OLD badges */
+.docs-nav-new { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.22); color: #86efac; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 10px; margin-left: auto; }
+.docs-nav-old { background: rgba(255,77,77,.1);  border: 1px solid rgba(255,77,77,.22); color: #ff4d4d;  font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 10px; margin-left: auto; }
+
+/* ── Fixed footer (user info + sign-out) ── */
+.sb-footer {
+  flex-shrink: 0;            /* never scrolls away */
+  padding: .9rem 1rem 1rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface); /* same as sidebar so it looks connected */
+}
+.sb-footer-meta { font-size: 11px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
+.sb-footer-meta strong { color: var(--text); }
+
+.sb-user-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+.sb-user-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(79,70,229,.2); border: 1px solid rgba(79,70,229,.35);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; flex-shrink: 0;
+}
+.sb-user-name  { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-user-role  { font-size: 10px; color: var(--muted); }
+
+.sb-signout {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%; padding: 7px 12px;
+  background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
+  border-radius: 8px; color: #fca5a5; font-size: 12px; font-weight: 500;
+  text-decoration: none; transition: all .15s; font-family: var(--sans);
+}
+.sb-signout:hover { background: rgba(239,68,68,.18); border-color: rgba(239,68,68,.4); }
+.swal-logout-popup {
+  border-radius: 12px !important;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+</style>
+
+<aside class="sidebar">
+
+  <!-- ══ Fixed: Logo ══ -->
+  <div class="sb-logo">
+    <div class="sb-logo-fallback">🟠</div>
+    <div class="sb-logo-text">
+      <h2>Talend · Qlik</h2>
+      <p>Gain Insights Platform</p>
+    </div>
+  </div>
+
+  <!-- ══ Scrollable: Nav ══ -->
+  <nav class="sb-nav thin-scroll">
+
+  <div class="sb-section">
+    <div class="sb-label">Main</div>
+    <a class="sb-link {% if active_page == 'talend_dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+      <span class="sb-ico">📊</span> Dashboard
+    </a>
+  </div>
+
+  <div class="sb-section" style="margin-top:.75rem">
+    <div class="sb-label">🟠 Talend</div>
+    <a class="sb-link {% if active_page == 'talend_generator' %}active{% endif %}" href="{% url 'talend_generator' %}">
+      <span class="sb-ico">📦</span> Project Generator <span class="docs-nav-new">AI</span>
+    </a>
+    <!-- <a class="sb-link {% if active_page == 'upload_talend' %}active{% endif %}" href="{% url 'upload_talend' %}">
+      <span class="sb-ico">⬆️</span> Upload Steps
+    </a> -->
+  </div>
+
+  <div class="sb-section" style="margin-top:.75rem">
+    <div class="sb-label">🟢 Qlik</div>
+    <a class="sb-link {% if active_page == 'qlik_generator' %}active{% endif %}" href="">
+      <span class="sb-ico">🟢</span> QVS Generator <span class="docs-nav-new">AI</span>
+    </a>
+    <!-- <a class="sb-link {% if active_page == 'upload_qlik' %}active{% endif %}" href="">
+      <span class="sb-ico">⬆️</span> Upload Steps
+    </a> -->
+  </div>
+
+  <div class="sb-section" style="margin-top:.75rem">
+    <div class="sb-label">Files</div>
+    <a href="javascript:void(0);" onclick="openDownloadsModal()" class="sb-link">
+      <span class="sb-ico">📁</span> Downloads
+    </a>
+  </div>
+
+  <div class="sb-section" style="margin-top:.75rem">
+    <div class="sb-label">Config</div>
+    <a class="sb-link" href="#" onclick="openSettings();return false;">
+      <span class="sb-ico">🔑</span> API Settings
+    </a>
+    <a class="sb-link" href="#" onclick="openModal('prefModal');return false;">
+      <span class="sb-ico">⚙️</span> Preferences
+    </a>
+    <!-- <a class="sb-link" href="{% url 'home' %}">
+      <span class="sb-ico">🏠</span> Platform Select
+    </a> -->
+  </div>
+
+  </nav><!-- /sb-nav -->
+
+  <!-- ══ Fixed: Footer (user + status + sign out) ══ -->
+  <div class="sb-footer">
+    <div class="sb-footer-meta">
+      Model: <strong id="sbModel">{{ model }}</strong><br>
+      Status: <strong id="sbStatus" style="color:var(--muted)">● Loading…</strong>
+    </div>
+
+    <div class="sb-user-row">
+      <div class="sb-user-avatar">👤</div>
+      <div style="min-width:0">
+        <div class="sb-user-name">{{ request.user.username }}</div>
+        <div class="sb-user-role">Administrator</div>
+      </div>
+    </div>
+
+    <a href="#" class="sb-signout" onclick="confirmLogout(event)">
+      <span style="font-size:13px">🚪</span> Sign Out
+    </a>
+  </div>
+
+</aside>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function confirmLogout(e) {
+  e.preventDefault();
+
+  Swal.fire({
+    title: 'Are you sure?',
+    text: "You will be logged out of your session.",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'Yes, Logout',
+    cancelButtonText: 'Cancel',
+    background: '#ffffff',
+    color: '#0f172a',
+    width: 380,
+    customClass: {
+      popup: 'swal-logout-popup'
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      window.location.href = "/logout/";
+    }
+  });
+}
+</script>

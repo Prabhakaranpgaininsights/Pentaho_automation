@@ -1,0 +1,1956 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title id="pageTitle">Dashboard — AI ETL Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+/* ════════════════════════════════════════════════
+   RESET + ROOT
+════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0d0f14;--surface:#151820;--surface2:#1c2030;--border:#2a2f3d;
+  --accent:#4f46e5;--accent-rgb:79,70,229;
+  --accent-muted:#a5b4fc;--accent-hover:#3b3fd5;
+  --success:#22c55e;--error:#ef4444;--warn:#f59e0b;--info:#38bdf8;
+  --text:#e8eaf0;--muted:#6b7280;
+  --sans:'Inter',sans-serif;--mono:'Courier New',monospace;
+}
+/* Talend theme overrides */
+body.plat-talend{
+  --accent:#e6520f;--accent-rgb:230,82,15;
+  --accent-muted:#ffb380;--accent-hover:#c43e08;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;}
+
+/* ── Thin scrollbar ── */
+*{scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+*::-webkit-scrollbar{width:3px;height:3px;}
+*::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+*::-webkit-scrollbar-track{background:transparent;}
+
+/* ════════════════════════════════════════════════
+   LAYOUT
+════════════════════════════════════════════════ */
+.shell{display:flex;min-height:100vh;}
+.main{flex:1;overflow-y:auto;height:100vh;padding:2rem 2rem 3rem;}
+@media(max-width:800px){.sidebar{display:none!important;}.main{padding:1.25rem;height:auto;}}
+
+/* ════════════════════════════════════════════════
+   PLATFORM SWITCHER BADGE (top bar)
+════════════════════════════════════════════════ */
+.platform-switcher{
+  display:flex;align-items:center;gap:4px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;padding:4px;
+}
+.psw-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 13px;border-radius:7px;border:none;
+  background:transparent;color:var(--muted);
+  font-size:12px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:all .2s;
+}
+.psw-btn .psw-dot{width:7px;height:7px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .2s;}
+.psw-btn.active-p{background:rgba(79,70,229,.18);color:#a5b4fc;}
+.psw-btn.active-p .psw-dot{background:#a5b4fc;box-shadow:0 0 6px rgba(79,70,229,.6);}
+.psw-btn.active-t{background:rgba(230,82,15,.18);color:#ffb380;}
+.psw-btn.active-t .psw-dot{background:#ffb380;box-shadow:0 0 6px rgba(230,82,15,.6);}
+
+/* ════════════════════════════════════════════════
+   TOP BAR
+════════════════════════════════════════════════ */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:10px;}
+.topbar-left h1{font-size:20px;font-weight:600;color:var(--text);}
+.topbar-left p{font-size:13px;color:var(--muted);margin-top:2px;}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+
+.tb-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;text-decoration:none;font-family:var(--sans);}
+.tb-btn:hover{border-color:var(--accent);color:var(--accent-muted);}
+.tb-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.tb-btn.primary:hover{background:var(--accent-hover);}
+
+.docs-tb-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 15px;border-radius:8px;border:1px solid rgba(var(--accent-rgb),.35);background:rgba(var(--accent-rgb),.09);color:var(--accent-muted);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;font-family:var(--sans);}
+.docs-tb-btn:hover{border-color:var(--accent);background:rgba(var(--accent-rgb),.18);box-shadow:0 0 18px rgba(var(--accent-rgb),.2);}
+
+.sqlite-tb-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 15px;border-radius:8px;border:1px solid rgba(56,189,248,.35);background:rgba(56,189,248,.09);color:#7dd3fc;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;font-family:var(--sans);text-decoration:none;}
+.sqlite-tb-btn:hover{border-color:var(--info);background:rgba(56,189,248,.18);color:#bae6fd;box-shadow:0 0 18px rgba(56,189,248,.2);}
+
+.refresh-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;font-family:var(--sans);}
+.refresh-btn:hover{border-color:var(--accent);color:var(--accent-muted);}
+.refresh-btn.spinning .ref-icon{display:inline-block;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ════════════════════════════════════════════════
+   STAT CARDS
+════════════════════════════════════════════════ */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:1.75rem;}
+@media(max-width:1000px){.stat-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:500px){.stat-grid{grid-template-columns:1fr;}}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.2rem;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.c-accent::before{background:var(--accent);}
+.stat-card.c-green::before{background:var(--success);}
+.stat-card.c-amber::before{background:var(--warn);}
+.stat-card.c-blue::before{background:var(--info);}
+.sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;}
+.sc-label{font-size:12px;color:var(--muted);font-weight:500;}
+.sc-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.sc-icon.ic-accent{background:rgba(var(--accent-rgb),.15);}
+.sc-icon.ic-green{background:rgba(34,197,94,.12);}
+.sc-icon.ic-amber{background:rgba(245,158,11,.12);}
+.sc-icon.ic-blue{background:rgba(56,189,248,.12);}
+.sc-value{font-size:28px;font-weight:600;color:var(--text);line-height:1;margin-bottom:6px;}
+.sc-delta{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px;}
+.sc-delta .up{color:var(--success);}
+
+/* ════════════════════════════════════════════════
+   GRID LAYOUTS
+════════════════════════════════════════════════ */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1.75rem;}
+.three-col{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:1.75rem;}
+@media(max-width:900px){.two-col,.three-col{grid-template-columns:1fr;}}
+
+/* ════════════════════════════════════════════════
+   PANEL
+════════════════════════════════════════════════ */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.3rem;}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.panel-title{font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;}
+.panel-action{font-size:12px;color:var(--muted);cursor:pointer;background:none;border:none;font-family:var(--sans);transition:color .15s;}
+.panel-action:hover{color:var(--accent-muted);}
+
+/* ── API key row ── */
+.api-key-row{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:10px;}
+.ak-label{font-size:11px;color:var(--muted);margin-bottom:2px;}
+.ak-value{font-family:var(--mono);font-size:13px;color:var(--text);flex:1;}
+.ak-status{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.ak-status.ok{background:var(--success);box-shadow:0 0 6px rgba(34,197,94,.5);}
+.ak-status.err{background:var(--error);}
+
+.icon-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:5px 9px;border-radius:6px;font-size:12px;cursor:pointer;font-family:var(--sans);transition:all .15s;flex-shrink:0;}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent-muted);}
+.icon-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* ── Info rows ── */
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.info-row:last-child{border-bottom:none;}
+.ir-key{color:var(--muted);}
+.ir-val{color:var(--text);font-weight:500;font-family:var(--mono);font-size:12px;}
+.ir-val.ok{color:var(--success);font-family:var(--sans);}
+.ir-val.warn{color:var(--warn);font-family:var(--sans);}
+
+/* ── Model badge ── */
+.model-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(var(--accent-rgb),.12);border:1px solid rgba(var(--accent-rgb),.3);color:var(--accent-muted);padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;}
+.model-dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 5px rgba(34,197,94,.6);}
+
+/* ════════════════════════════════════════════════
+   USAGE BARS
+════════════════════════════════════════════════ */
+.usage-item{margin-bottom:1rem;}
+.usage-item:last-child{margin-bottom:0;}
+.usage-head{display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;}
+.u-label{color:var(--muted);}
+.u-val{color:var(--text);font-weight:500;}
+.usage-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.usage-fill{height:100%;border-radius:3px;transition:width .6s ease;width:0%;}
+.uf-accent{background:var(--accent);}
+.uf-green{background:var(--success);}
+.uf-blue{background:var(--info);}
+
+/* ════════════════════════════════════════════════
+   MINI CHART
+════════════════════════════════════════════════ */
+.mini-chart{display:flex;align-items:flex-end;gap:5px;height:60px;margin-top:.5rem;}
+.mc-bar{flex:1;border-radius:3px 3px 0 0;background:rgba(var(--accent-rgb),.3);transition:background .15s;cursor:pointer;position:relative;min-height:4px;}
+.mc-bar:hover,.mc-bar.today{background:var(--accent);}
+.mc-tip{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:10px;padding:2px 6px;border-radius:4px;white-space:nowrap;display:none;margin-bottom:4px;z-index:10;}
+.mc-bar:hover .mc-tip{display:block;}
+.mc-labels{display:flex;gap:5px;margin-top:5px;}
+.mc-labels span{flex:1;text-align:center;font-size:9px;color:var(--muted);}
+
+/* ════════════════════════════════════════════════
+   ACTIVITY FEED
+════════════════════════════════════════════════ */
+.activity-feed{display:flex;flex-direction:column;}
+.activity-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.activity-item:last-child{border-bottom:none;}
+.ai-dot-wrap{display:flex;flex-direction:column;align-items:center;padding-top:3px;}
+.ai-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.ai-dot.ktr,.ai-dot.process{background:var(--accent);}
+.ai-dot.kjb,.ai-dot.qvs,.ai-dot.context{background:var(--success);}
+.ai-dot.sql,.ai-dot.connection{background:var(--info);}
+.ai-dot.err{background:var(--error);}
+.ai-line{width:1px;flex:1;background:var(--border);margin-top:4px;}
+.activity-item:last-child .ai-line{display:none;}
+.ai-body{flex:1;}
+.ai-title{font-size:13px;color:var(--text);font-weight:500;margin-bottom:2px;}
+.ai-meta{font-size:11px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;}
+.ai-badge{padding:1px 7px;border-radius:4px;font-size:10px;font-weight:700;}
+.ai-badge.ktr,.ai-badge.process{background:rgba(var(--accent-rgb),.2);color:var(--accent-muted);}
+.ai-badge.kjb,.ai-badge.qvs,.ai-badge.context{background:rgba(34,197,94,.15);color:#86efac;}
+.ai-badge.sql,.ai-badge.connection{background:rgba(56,189,248,.15);color:#7dd3fc;}
+.ai-badge.err{background:rgba(239,68,68,.15);color:#fca5a5;}
+
+/* ════════════════════════════════════════════════
+   QUICK ACTIONS
+════════════════════════════════════════════════ */
+.qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.qa-btn{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;text-decoration:none;font-family:var(--sans);}
+.qa-btn:hover{border-color:var(--accent);color:var(--accent-muted);background:rgba(var(--accent-rgb),.07);}
+.qa-ico{font-size:18px;}
+.qt-label{font-size:13px;font-weight:500;display:block;}
+.qt-sub{font-size:11px;color:var(--muted);margin-top:1px;display:block;}
+
+/* ════════════════════════════════════════════════
+   DATA TABLE
+════════════════════════════════════════════════ */
+.data-table{width:100%;border-collapse:collapse;font-size:12px;}
+.data-table th{text-align:left;padding:6px 10px;color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);}
+.data-table td{padding:9px 10px;border-bottom:1px solid rgba(42,47,61,.6);color:var(--text);}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:rgba(var(--accent-rgb),.04);}
+.td-mono{font-family:var(--mono);font-size:11px;color:var(--muted);}
+.td-badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;display:inline-block;}
+.tdb-ok{background:rgba(34,197,94,.12);color:#86efac;}
+.tdb-err{background:rgba(239,68,68,.12);color:#fca5a5;}
+.tdb-ktr,.tdb-process{background:rgba(var(--accent-rgb),.18);color:var(--accent-muted);}
+.tdb-kjb,.tdb-qvs,.tdb-context{background:rgba(34,197,94,.15);color:#86efac;}
+.tdb-sql,.tdb-conn{background:rgba(56,189,248,.15);color:#7dd3fc;}
+.tdb-zip{background:rgba(245,158,11,.15);color:#fbbf24;}
+.tdb-item{background:rgba(var(--accent-rgb),.15);color:var(--accent-muted);}
+
+/* ════════════════════════════════════════════════
+   SKELETON LOADER
+════════════════════════════════════════════════ */
+.skeleton{background:linear-gradient(90deg,var(--surface2) 25%,var(--border) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:4px;display:inline-block;}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ════════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════════ */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:13px;padding:10px 16px;border-radius:8px;z-index:9999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.ok{border-color:rgba(34,197,94,.4);color:#86efac;}
+.toast.err{border-color:rgba(239,68,68,.4);color:#fca5a5;}
+
+/* ════════════════════════════════════════════════
+   MODALS — shared base
+════════════════════════════════════════════════ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-width:480px;box-shadow:0 25px 60px rgba(0,0,0,.5);animation:modalIn .2s ease;}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(8px);}to{opacity:1;transform:none;}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.3rem;border-bottom:1px solid var(--border);}
+.modal-head h3{font-size:15px;font-weight:600;color:var(--text);}
+.modal-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:6px;transition:all .15s;}
+.modal-close:hover{background:var(--surface2);color:var(--text);}
+.modal-body{padding:1.3rem;max-height:70vh;overflow-y:auto;}
+.modal-footer{padding:.9rem 1.3rem;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
+
+/* ════════════════════════════════════════════════
+   FORM ELEMENTS
+════════════════════════════════════════════════ */
+.form-group{margin-bottom:1.1rem;}
+.form-label{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.04em;}
+.form-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--mono);outline:none;transition:border-color .15s;}
+.form-input:focus{border-color:var(--accent);}
+.form-input::placeholder{color:var(--muted);}
+.form-input[readonly]{color:var(--muted);cursor:default;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;cursor:pointer;transition:border-color .15s;}
+.form-select:focus{border-color:var(--accent);}
+.toggle-switch{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.toggle-switch:last-child{border-bottom:none;}
+.ts-label{font-size:13px;color:var(--text);}
+.ts-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.switch{position:relative;width:36px;height:20px;flex-shrink:0;}
+.switch input{opacity:0;width:0;height:0;}
+.switch-slider{position:absolute;inset:0;background:var(--border);border-radius:20px;cursor:pointer;transition:.2s;}
+.switch-slider::before{content:'';position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;}
+.switch input:checked + .switch-slider{background:var(--accent);}
+.switch input:checked + .switch-slider::before{transform:translateX(16px);}
+.mfooter-btn{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:var(--sans);transition:all .15s;}
+.mfooter-btn.primary{background:var(--accent);color:#fff;}
+.mfooter-btn.primary:hover{background:var(--accent-hover);}
+.mfooter-btn.ghost{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+.mfooter-btn.ghost:hover{background:var(--border);color:var(--text);}
+.mfooter-btn.danger{background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.3);}
+.mfooter-btn.danger:hover{background:rgba(239,68,68,.22);}
+.api-test-result{font-size:12px;padding:8px 12px;border-radius:6px;margin-top:10px;display:none;line-height:1.5;}
+.api-test-result.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#86efac;display:block;}
+.api-test-result.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;display:block;}
+.api-test-result.info{background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.3);color:var(--accent-muted);display:block;}
+.section-divider{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:1rem 0 .5rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
+
+/* ── History search / chips ── */
+.hist-search-wrap{display:flex;align-items:center;gap:8px;}
+.hist-search{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:12px;color:var(--text);font-family:var(--sans);outline:none;width:170px;transition:border-color .15s;}
+.hist-search:focus{border-color:var(--accent);}
+.hist-search::placeholder{color:var(--muted);}
+.chip{display:inline-flex;align-items:center;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:600;}
+.chip-accent{background:rgba(var(--accent-rgb),.12);border:1px solid rgba(var(--accent-rgb),.3);color:var(--accent-muted);}
+.chip-green{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:#86efac;}
+.chip-red{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5;}
+
+/* ── xml area ── */
+.xml-area{height:160px;resize:vertical;white-space:pre;overflow:auto;font-size:11px;font-family:var(--mono);}
+
+/* ── File row ── */
+.dl-file-row{transition:border-color .15s,background .15s,transform .1s;}
+.dl-file-row:hover{border-color:rgba(var(--accent-rgb),.5)!important;background:rgba(var(--accent-rgb),.06)!important;transform:translateY(-1px);}
+.dl-file-row:active{transform:translateY(0);}
+
+/* ════════════════════════════════════════════════
+   FILE PREVIEW MODAL
+════════════════════════════════════════════════ */
+.preview-code-area{width:100%;min-height:400px;max-height:55vh;resize:vertical;background:#080a10;color:#dde3ed;font-family:var(--mono);font-size:11.5px;line-height:1.75;border:none;outline:none;padding:1rem 1.3rem;white-space:pre;overflow:auto;box-sizing:border-box;display:block;}
+.preview-meta-bar{display:flex;gap:16px;padding:8px 1.3rem;background:var(--surface2);border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);flex-wrap:wrap;align-items:center;}
+.preview-meta-bar span{display:flex;align-items:center;gap:5px;}
+.preview-skeleton{text-align:center;color:var(--muted);padding:2.5rem;}
+.preview-skeleton .sk-line{display:block;margin:0 auto 10px;height:13px;border-radius:4px;}
+
+/* ════════════════════════════════════════════════
+   DOCS MODAL
+════════════════════════════════════════════════ */
+.docs-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);z-index:2000;display:none;align-items:flex-start;justify-content:center;padding:2.5vh 1rem;}
+.docs-modal-overlay.open{display:flex;}
+.docs-modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:1040px;max-height:94vh;display:flex;flex-direction:column;box-shadow:0 40px 100px rgba(0,0,0,.65);animation:docsSlideIn .22s cubic-bezier(.16,1,.3,1);overflow:hidden;}
+@keyframes docsSlideIn{from{opacity:0;transform:scale(.97) translateY(12px);}to{opacity:1;transform:none;}}
+.docs-hdr{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0;background:linear-gradient(135deg,rgba(var(--accent-rgb),.07) 0%,rgba(56,189,248,.03) 100%);}
+.docs-hdr-left{display:flex;align-items:center;gap:14px;}
+.docs-hdr-icon{width:42px;height:42px;border-radius:11px;background:rgba(var(--accent-rgb),.16);border:1px solid rgba(var(--accent-rgb),.3);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+.docs-hdr-left h2{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-.015em;}
+.docs-hdr-left p{font-size:12px;color:var(--muted);margin-top:2px;}
+.docs-hdr-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.22);font-size:10.5px;font-weight:700;color:#86efac;margin-top:4px;}
+.docs-hdr-badge-dot{width:5px;height:5px;border-radius:50%;background:var(--success);animation:docsPulse 2.2s infinite;}
+@keyframes docsPulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}65%{box-shadow:0 0 0 5px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+.docs-dl-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:8px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#86efac;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--sans);white-space:nowrap;flex-shrink:0;}
+.docs-dl-btn:hover{background:rgba(34,197,94,.2);border-color:rgba(34,197,94,.5);color:#bbf7d0;transform:translateY(-1px);box-shadow:0 4px 14px rgba(34,197,94,.2);}
+.docs-dl-btn.loading{opacity:.7;cursor:wait;}
+.docs-searchbar{padding:.7rem 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0;position:relative;}
+.docs-searchbar-ico{position:absolute;left:26px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted);pointer-events:none;}
+.docs-search-inp{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:7px 12px 7px 34px;font-size:13px;color:var(--text);font-family:var(--sans);outline:none;transition:border-color .15s;}
+.docs-search-inp:focus{border-color:var(--accent);}
+.docs-search-inp::placeholder{color:var(--muted);}
+.docs-body{display:flex;flex:1;overflow:hidden;}
+.docs-nav{width:210px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:.6rem .55rem;}
+.docs-nav-grp{margin-bottom:.9rem;}
+.docs-nav-grp-lbl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding:.3rem .5rem .2rem;}
+.docs-nav-item{display:flex;align-items:center;gap:8px;padding:6.5px 9px;border-radius:7px;font-size:12.5px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s;border:none;background:none;width:100%;font-family:var(--sans);text-align:left;}
+.docs-nav-item:hover{background:rgba(var(--accent-rgb),.08);color:var(--accent-muted);}
+.docs-nav-item.active{background:rgba(var(--accent-rgb),.14);color:var(--accent-muted);border-left:2px solid var(--accent);padding-left:7px;}
+.docs-nav-item .ni{font-size:13px;width:17px;text-align:center;flex-shrink:0;}
+.docs-nav-new{margin-left:auto;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.22);color:#86efac;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;}
+.docs-nav-old{margin-left:auto;background:rgba(255,77,77,.1);border:1px solid rgba(255,77,77,.22);color:#ff4d4d;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;}
+.docs-content{flex:1;overflow-y:auto;padding:1.4rem 1.8rem;}
+.docs-sec{display:none;animation:docsFade .18s ease;}
+.docs-sec.active{display:block;}
+@keyframes docsFade{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+.dh1{font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.02em;margin-bottom:.25rem;display:flex;align-items:center;gap:9px;}
+.dlead{font-size:13px;color:#9ca3b0;line-height:1.75;margin-bottom:1.25rem;}
+.dh2{font-size:13.5px;font-weight:700;color:var(--text);margin:1.4rem 0 .55rem;padding-bottom:.35rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;}
+.dh3{font-size:12.5px;font-weight:700;color:var(--accent-muted);margin:1rem 0 .4rem;}
+.dp{font-size:12.5px;color:#8b95a8;line-height:1.75;margin-bottom:.7rem;}
+.d-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:9px;margin-bottom:1.1rem;}
+.d-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;transition:border-color .15s;}
+.d-card:hover{border-color:rgba(var(--accent-rgb),.4);}
+.d-card-ico{font-size:20px;margin-bottom:.4rem;}
+.d-card-t{font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:.2rem;}
+.d-card-d{font-size:11.5px;color:var(--muted);line-height:1.55;}
+.d-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:.9rem;}
+.d-table th{text-align:left;padding:5px 10px;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:600;border-bottom:1px solid var(--border);}
+.d-table td{padding:8px 10px;border-bottom:1px solid rgba(42,47,61,.45);color:var(--text);vertical-align:top;}
+.d-table tr:last-child td{border-bottom:none;}
+.d-table tr:hover td{background:rgba(var(--accent-rgb),.04);}
+.dm{font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:var(--mono);}
+.dm-get{background:rgba(34,197,94,.12);color:#86efac;}
+.dm-post{background:rgba(var(--accent-rgb),.15);color:var(--accent-muted);}
+.dpath{font-family:var(--mono);font-size:11.5px;color:#7dd3fc;}
+.ddesc{font-size:12px;color:#8b95a8;}
+.d-code{background:#080a10;border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-family:var(--mono);font-size:11.5px;color:#dde3ed;line-height:1.75;overflow-x:auto;margin-bottom:.9rem;position:relative;}
+.d-code .kw{color:var(--accent-muted);}
+.d-code .str{color:#86efac;}
+.d-code .cmt{color:#3d4559;}
+.d-code .num{color:#fbbf24;}
+.d-copy{position:absolute;top:8px;right:8px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:2px 8px;border-radius:5px;cursor:pointer;font-family:var(--sans);transition:all .15s;}
+.d-copy:hover{border-color:var(--accent);color:var(--accent-muted);}
+.d-callout{display:flex;gap:11px;padding:11px 13px;border-radius:9px;margin-bottom:.9rem;font-size:12.5px;line-height:1.65;}
+.d-callout.info{background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.18);color:#bae6fd;}
+.d-callout.warn{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);color:#fde68a;}
+.d-callout.tip{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);color:#bbf7d0;}
+.d-callout.note{background:rgba(var(--accent-rgb),.07);border:1px solid rgba(var(--accent-rgb),.2);color:var(--accent-muted);}
+.d-ico{font-size:15px;flex-shrink:0;margin-top:1px;}
+.d-steps{margin-bottom:.9rem;}
+.d-step{display:flex;gap:13px;padding:.75rem 0;border-bottom:1px solid rgba(42,47,61,.45);}
+.d-step:last-child{border-bottom:none;}
+.d-step-n{width:24px;height:24px;border-radius:50%;background:rgba(var(--accent-rgb),.16);border:1px solid rgba(var(--accent-rgb),.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent-muted);flex-shrink:0;margin-top:1px;}
+.d-step-t{font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:.2rem;}
+.d-step-d{font-size:12px;color:var(--muted);line-height:1.6;}
+.db{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;}
+.db-a{background:rgba(var(--accent-rgb),.14);border:1px solid rgba(var(--accent-rgb),.28);color:var(--accent-muted);}
+.db-g{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.22);color:#86efac;}
+.db-b{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.22);color:#7dd3fc;}
+.db-o{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.22);color:#fbbf24;}
+.db-r{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.22);color:#fca5a5;}
+.docs-ftr{padding:.75rem 1.5rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--surface2);flex-wrap:wrap;gap:10px;}
+.docs-ftr-l{font-size:11.5px;color:var(--muted);}
+.docs-ftr-l strong{color:var(--text);}
+.docs-kbd{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--muted);}
+.docs-kbd kbd{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:var(--mono);font-size:10px;color:var(--accent-muted);}
+
+/* ════════════════════════════════════════════════
+   ABOUT MODAL
+════════════════════════════════════════════════ */
+.about-platform-card{display:flex;align-items:center;gap:14px;padding:14px;border-radius:10px;margin-bottom:10px;border:1px solid var(--border);background:var(--surface2);transition:border-color .2s;}
+.about-platform-card:hover{border-color:rgba(var(--accent-rgb),.4);}
+.apc-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.apc-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.apc-desc{font-size:12px;color:var(--muted);line-height:1.6;}
+.about-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:1rem 0;}
+.about-stat{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:.8rem;text-align:center;}
+.about-stat-val{font-size:20px;font-weight:700;color:var(--text);}
+.about-stat-lab{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ── Footer ── */
+.footer{margin-top:2rem;font-size:12px;color:var(--muted);text-align:center;}
+</style>
+</head>
+<body class="plat-pentaho">
+<div class="shell">
+
+  <!-- ══ SIDEBARS (one shown at a time) ══ -->
+  <div id="sidebarPentaho">{% include 'components/sidebar.html' %}</div>
+  <div id="sidebarTalend" style="display:none">{% include 'components/sidebar_talend.html' %}</div>
+
+  <!-- ══ MAIN ══ -->
+  <main class="main">
+
+    <!-- ── TOP BAR ── -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1 id="dashTitle">Dashboard</h1>
+        <p id="dashDate">—</p>
+      </div>
+      <div class="topbar-right">
+        <!-- Platform Switcher -->
+        <div class="platform-switcher">
+          <button class="psw-btn active-p" id="pswPentaho" onclick="switchPlatform('pentaho')" title="Switch to Pentaho">
+            <span class="psw-dot"></span> Pentaho PDI
+          </button>
+          <button class="psw-btn" id="pswTalend" onclick="switchPlatform('talend')" title="Switch to Talend / Qlik">
+            <span class="psw-dot"></span> Talend · Qlik
+          </button>
+        </div>
+        <!-- Pentaho-only buttons -->
+        <button class="docs-tb-btn pent-only" onclick="openDocs('overview')">📖 Docs</button>
+        <button class="docs-tb-btn tald-only" onclick="openDocs('tald overview')">📖 Docs</button>
+        <a class="sqlite-tb-btn" href="/console/"><span>🗃</span> SQLite Console</a>
+        <!-- Talend-only buttons -->
+        <!-- <button class="docs-tb-btn tald-only" style="display:none" onclick="openSettings()">⚙️ Settings</button> -->
+        <!-- About button (both platforms) -->
+        <button class="tb-btn" onclick="openModal('aboutModal')" title="About this platform">ℹ️ About</button>
+        <!-- Refresh (both) -->
+        <button class="refresh-btn" id="refreshBtn" onclick="loadStats()">
+          <span class="ref-icon">↻</span> Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- ── STAT CARDS ── -->
+    <div class="stat-grid">
+      <div class="stat-card c-accent">
+        <div class="sc-top"><span class="sc-label">Total API Calls</span><span class="sc-icon ic-accent">📡</span></div>
+        <div class="sc-value" id="statTotalCalls">—</div>
+        <div class="sc-delta"><span class="up" id="statCallsDelta">↑ 0</span>&nbsp;last 7 days</div>
+      </div>
+      <div class="stat-card c-green">
+        <div class="sc-top"><span class="sc-label">Files Generated</span><span class="sc-icon ic-green">📁</span></div>
+        <div class="sc-value" id="statTotalFiles">—</div>
+        <div class="sc-delta"><span class="up" id="statFilesDelta">↑ 0</span>&nbsp;this month</div>
+      </div>
+      <div class="stat-card c-amber">
+        <div class="sc-top"><span class="sc-label">Tokens Used</span><span class="sc-icon ic-amber">🔤</span></div>
+        <div class="sc-value" id="statTokens">—</div>
+        <div class="sc-delta" id="statTokensSub">Input + Output</div>
+      </div>
+      <div class="stat-card c-blue">
+        <div class="sc-top"><span class="sc-label">Success Rate</span><span class="sc-icon ic-blue">✅</span></div>
+        <div class="sc-value" id="statSuccessRate">—</div>
+        <div class="sc-delta"><span id="statFailCount">0</span>&nbsp;failed calls</div>
+      </div>
+    </div>
+
+    <!-- ── API CONFIG + USAGE ── -->
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">🔑 API Configuration</span>
+          <button class="panel-action" onclick="pingApi()">↻ Ping API</button>
+        </div>
+        <div class="api-key-row">
+          <span class="ak-status ok" id="apiStatusDot"></span>
+          <div style="flex:1">
+            <div class="ak-label">API Key</div>
+            <div class="ak-value" id="apiKeyDisplay">sk-ant-••••••••••••••••••••••••</div>
+          </div>
+          <button class="icon-btn" id="toggleKeyBtn" onclick="toggleKey()" title="Show/hide key">👁</button>
+          <button class="icon-btn" onclick="copyKey()" title="Copy key">📋</button>
+        </div>
+        <div class="info-row"><span class="ir-key">Anthropic Version</span><span class="ir-val">2023-06-01</span></div>
+        <div class="info-row"><span class="ir-key">Model</span><span class="model-badge"><span class="model-dot"></span><span id="modelName">—</span></span></div>
+        <div class="info-row"><span class="ir-key">Max Tokens</span><span class="ir-val" id="dispMaxTokens">—</span></div>
+        <div class="info-row"><span class="ir-key">Timeout</span><span class="ir-val" id="dispTimeout">—</span></div>
+        <div class="info-row"><span class="ir-key">SSL Verify</span><span class="ir-val warn">Disabled</span></div>
+        <div class="info-row"><span class="ir-key">Connection</span><span class="ir-val ok" id="connStatus">● Connected</span></div>
+        <div class="info-row"><span class="ir-key">Platform</span><span class="ir-val" id="connPlatform" style="font-family:var(--sans)">Pentaho PDI</span></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">📈 Usage This Month</span></div>
+        <div class="usage-item"><div class="usage-head"><span class="u-label">API Calls</span><span class="u-val" id="uCalls">—</span></div><div class="usage-bar"><div class="usage-fill uf-accent" id="uCallsBar"></div></div></div>
+        <div class="usage-item"><div class="usage-head"><span class="u-label">Input Tokens</span><span class="u-val" id="uInTokens">—</span></div><div class="usage-bar"><div class="usage-fill uf-blue" id="uInBar"></div></div></div>
+        <div class="usage-item"><div class="usage-head"><span class="u-label">Output Tokens</span><span class="u-val" id="uOutTokens">—</span></div><div class="usage-bar"><div class="usage-fill uf-green" id="uOutBar"></div></div></div>
+        <!-- Pentaho: KTR/KJB | Talend: Project/Script -->
+        <div class="usage-item"><div class="usage-head"><span class="u-label" id="uFile1Label">KTR Files</span><span class="u-val" id="uFile1">—</span></div><div class="usage-bar"><div class="usage-fill uf-accent" id="uFile1Bar"></div></div></div>
+        <div class="usage-item"><div class="usage-head"><span class="u-label" id="uFile2Label">KJB Files</span><span class="u-val" id="uFile2">—</span></div><div class="usage-bar"><div class="usage-fill uf-green" id="uFile2Bar"></div></div></div>
+        <div class="panel-head" style="margin-top:1.25rem;margin-bottom:.25rem">
+          <span class="panel-title" style="font-size:12px">Daily API calls (last 7 days)</span>
+        </div>
+        <div class="mini-chart" id="miniChart"></div>
+        <div class="mc-labels" id="miniLabels"></div>
+      </div>
+    </div>
+
+    <!-- ── ACTIVITY + QUICK ACTIONS ── -->
+    <div class="three-col">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">🕐 Recent Activity</span>
+          <button class="panel-action" onclick="clearHistory()">Clear all</button>
+        </div>
+        <div class="activity-feed" id="activityFeed">
+          <div style="font-size:13px;color:var(--muted);text-align:center;padding:12px 0">Loading…</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">⚡ Quick Actions</span></div>
+
+        <!-- Pentaho Quick Actions -->
+        <div class="qa-grid pent-only" id="qaGridPentaho">
+          <a class="qa-btn" href="{% url 'upload_tr' %}"><span class="qa-ico">🔄</span><span><span class="qt-label">New KTR</span><span class="qt-sub">Transformation</span></span></a>
+          <a class="qa-btn" href="{% url 'upload_tr' %}"><span class="qa-ico">💼</span><span><span class="qt-label">New KJB</span><span class="qt-sub">Job file</span></span></a>
+          <a class="qa-btn" href="{% url 'generate_pentaho' %}"><span class="qa-ico">📦</span><span><span class="qt-label">Generate Both</span><span class="qt-sub">KTR + KJB</span></span></a>
+          <a class="qa-btn" href="{% url 'table_builder' %}"><span class="qa-ico">🗄</span><span><span class="qt-label">Table Builder</span><span class="qt-sub">Schema design</span></span></a>
+        </div>
+
+        <!-- Talend Quick Actions -->
+        <div class="qa-grid tald-only" id="qaGridTalend" style="display:none">
+          <a class="qa-btn" href="{% url 'talend_generator' %}"><span class="qa-ico">🟠</span><span><span class="qt-label">Talend Project</span><span class="qt-sub">Generate ZIP</span></span></a>
+          <a class="qa-btn" href="#"><span class="qa-ico">🟢</span><span><span class="qt-label">Qlik Scripts</span><span class="qt-sub">Generate .qvs</span></span></a>
+          <a class="qa-btn" href="{% url 'talend_generator' %}"><span class="qa-ico">📦</span><span><span class="qt-label">Full Project ZIP</span><span class="qt-sub">All folders</span></span></a>
+          <a class="qa-btn" href="{% url 'downloads_list' %}"><span class="qa-ico">📁</span><span><span class="qt-label">Downloads</span><span class="qt-sub">Generated files</span></span></a>
+        </div>
+
+        <!-- Endpoints -->
+        <div style="margin-top:1.25rem">
+          <div class="panel-title" style="font-size:12px;margin-bottom:.75rem">🔗 Endpoints</div>
+          <!-- Pentaho Endpoints -->
+          <div id="endpointsPentaho">
+            <div class="info-row"><span class="ir-key">Generator UI</span><span class="ir-val">/generate-pentaho/</span></div>
+            <div class="info-row"><span class="ir-key">Generate Files</span><span class="ir-val">/generate_pentaho_files/</span></div>
+            <div class="info-row"><span class="ir-key">Generate SQL</span><span class="ir-val">/generate-sql/</span></div>
+            <div class="info-row"><span class="ir-key">SQL Preview</span><span class="ir-val">/generate-sql-preview/</span></div>
+            <div class="info-row"><span class="ir-key">Create Table</span><span class="ir-val">/create-table/</span></div>
+            <div class="info-row"><span class="ir-key">Table Builder</span><span class="ir-val">/table-builder/</span></div>
+            <div class="info-row"><span class="ir-key">Join Builder</span><span class="ir-val">/table-joins/</span></div>
+            <div class="info-row"><span class="ir-key">Test DB Conn</span><span class="ir-val">/test-connection/</span></div>
+            <div class="info-row"><span class="ir-key">Dashboard Stats</span><span class="ir-val">/dashboard/stats/</span></div>
+            <div class="info-row"><span class="ir-key">Download ZIP</span><span class="ir-val">/downloads/zip/</span></div>
+          </div>
+          <!-- Talend Endpoints -->
+          <div id="endpointsTalend" style="display:none">
+            <div class="info-row"><span class="ir-key">Talend Generator</span><span class="ir-val">/talend/</span></div>
+            <div class="info-row"><span class="ir-key">Generate Talend</span><span class="ir-val">/talend/generate/</span></div>
+            <div class="info-row"><span class="ir-key">Qlik Generator</span><span class="ir-val">/qlik/</span></div>
+            <div class="info-row"><span class="ir-key">Generate Qlik</span><span class="ir-val">/qlik/generate/</span></div>
+            <div class="info-row"><span class="ir-key">Dashboard Stats</span><span class="ir-val">/talend/stats/</span></div>
+            <div class="info-row"><span class="ir-key">Downloads</span><span class="ir-val">/downloads/</span></div>
+            <div class="info-row"><span class="ir-key">Export ZIP</span><span class="ir-val">/downloads/zip/</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── GENERATION HISTORY TABLE ── -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">📋 Generation History</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="histPlatBadge" style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(79,70,229,.18);color:#a5b4fc;font-weight:700">Pentaho</span>
+          <button class="panel-action" onclick="openHistory('all')">View All</button>
+          <button class="panel-action" onclick="clearHistory()">Clear history</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead>
+            <tr><th>#</th><th>Filename</th><th>Type</th><th id="thSteps">Steps</th><th>Tokens</th><th>Duration</th><th>Status</th><th>Time</th></tr>
+          </thead>
+          <tbody id="historyBody">
+            <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:1.5rem">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footer">Powered by <strong>Gain Insights</strong> · <span id="footerPlatform">Pentaho PDI</span> + Anthropic Claude AI</div>
+  </main>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     HISTORY MODAL
+══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="historyModal" onclick="overlayClose(event,'historyModal')" style="align-items:flex-start;padding-top:4vh">
+  <div class="modal" style="max-width:820px;width:100%">
+    <div class="modal-head">
+      <h3 id="historyModalTitle">📋 Generation History</h3>
+      <div class="hist-search-wrap">
+        <input id="histSearchInput" class="hist-search" placeholder="Search filename…" oninput="debounceSearch()"/>
+        <div style="display:flex;gap:4px" id="histTabsContainer">
+          <!-- tabs injected by JS based on platform -->
+        </div>
+        <button class="modal-close" onclick="closeModal('historyModal')">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="histSummary" style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap"></div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>#</th><th>Filename</th><th>Type</th><th id="histThSteps">Steps</th><th>Tokens</th><th>Duration</th><th>Status</th><th>When</th><th></th></tr></thead>
+          <tbody id="histTableBody"><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1.5rem">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;font-size:12px;color:var(--muted)">
+        <span id="histPageInfo">—</span>
+        <div style="display:flex;gap:6px">
+          <button class="icon-btn" id="histPrevBtn" onclick="histChangePage(-1)" disabled>← Prev</button>
+          <button class="icon-btn" id="histNextBtn" onclick="histChangePage(+1)" disabled>Next →</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="mfooter-btn danger" onclick="clearHistory()">🗑 Clear All</button>
+      <button class="mfooter-btn ghost" onclick="closeModal('historyModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     RECORD DETAIL MODAL
+══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="histDetailModal" onclick="overlayClose(event,'histDetailModal')" style="align-items:flex-start;padding-top:4vh">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head"><h3 id="detailTitle">Record Detail</h3><button class="modal-close" onclick="closeModal('histDetailModal')">✕</button></div>
+    <div class="modal-body" id="detailBody" style="font-size:13px"><div style="text-align:center;color:var(--muted);padding:1rem">Loading…</div></div>
+    <div class="modal-footer"><button class="mfooter-btn ghost" onclick="closeModal('histDetailModal')">Close</button></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     API SETTINGS MODAL
+══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="apiModal" onclick="overlayClose(event,'apiModal')">
+  <div class="modal">
+    <div class="modal-head"><h3>🔑 API Settings</h3><button class="modal-close" onclick="closeModal('apiModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">API Key</label>
+        <div style="position:relative">
+          <input class="form-input" type="password" id="apiKeyInput" placeholder="sk-ant-••••••••••••••••••••••••" style="padding-right:42px;font-family:var(--mono)"/>
+          <button onclick="toggleApiKeyInput()" id="apiKeyEye" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px">👁</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Model</label>
+          <select class="form-select" id="modelSelect">
+            <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+            <option value="claude-opus-4-20250514">Claude Opus 4</option>
+            <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max Tokens</label>
+          <input class="form-input" type="number" id="maxTokensInput" min="1000" max="32000" style="font-family:var(--sans)"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Timeout (seconds)</label>
+          <input class="form-input" type="number" id="timeoutInput" min="30" max="600" style="font-family:var(--sans)"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Anthropic Version</label>
+          <input class="form-input" type="text" value="2023-06-01" readonly/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">API Endpoint</label>
+        <input class="form-input" type="text" value="https://api.anthropic.com/v1/messages" readonly/>
+      </div>
+      <button onclick="testApiKey()" class="mfooter-btn ghost" style="width:100%;margin-top:.25rem">⚡ Test Connection</button>
+      <div class="api-test-result" id="apiTestResult"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="mfooter-btn ghost" onclick="closeModal('apiModal')">Cancel</button>
+      <button class="mfooter-btn ghost" onclick="resetApiModal()">Reset</button>
+      <button class="mfooter-btn primary" onclick="saveApiSettings()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PREFERENCES MODAL
+══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="prefModal" onclick="overlayClose(event,'prefModal')">
+  <div class="modal">
+    <div class="modal-head"><h3>⚙️ Preferences</h3><button class="modal-close" onclick="closeModal('prefModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="section-divider">Dashboard</div>
+      <div class="form-group">
+        <label class="form-label">Auto-Refresh Interval</label>
+        <select class="form-select" id="prefRefresh">
+          <option value="0">Disabled</option>
+          <option value="30">Every 30 seconds</option>
+          <option value="60" selected>Every 60 seconds</option>
+          <option value="120">Every 2 minutes</option>
+          <option value="300">Every 5 minutes</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">History Records Shown</label>
+        <select class="form-select" id="prefHistoryLimit">
+          <option value="10">Last 10 records</option>
+          <option value="25">Last 25 records</option>
+          <option value="50" selected>Last 50 records</option>
+          <option value="100">Last 100 records</option>
+        </select>
+      </div>
+      <div class="section-divider">Files</div>
+      <div class="form-group"><label class="form-label">Default ZIP Name</label><input class="form-input" type="text" id="prefFolderName" placeholder="e.g. pentaho_output" style="font-family:var(--sans)"/></div>
+      <div class="section-divider">Notifications</div>
+      <div class="form-group">
+        <div class="toggle-switch"><div><div class="ts-label">Toast notifications</div><div class="ts-sub">Show success / error popups</div></div><label class="switch"><input type="checkbox" id="prefToast" checked/><span class="switch-slider"></span></label></div>
+        <div class="toggle-switch"><div><div class="ts-label">Auto-download files</div><div class="ts-sub">Download generated files automatically</div></div><label class="switch"><input type="checkbox" id="prefAutoDownload" checked/><span class="switch-slider"></span></label></div>
+        <div class="toggle-switch"><div><div class="ts-label">Show debug info on errors</div><div class="ts-sub">Display raw API response</div></div><label class="switch"><input type="checkbox" id="prefDebug"/><span class="switch-slider"></span></label></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="mfooter-btn danger" onclick="clearHistory();closeModal('prefModal')">🗑 Clear History</button>
+      <button class="mfooter-btn ghost" onclick="closeModal('prefModal')">Cancel</button>
+      <button class="mfooter-btn primary" onclick="savePreferences()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     DOWNLOADS MODAL
+══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="downloadsModal" onclick="overlayClose(event,'downloadsModal')" style="align-items:flex-start;padding-top:4vh">
+  <div class="modal" style="max-width:860px;width:100%">
+    <div class="modal-head">
+      <h3>📦 Downloaded Files</h3>
+      <div class="hist-search-wrap">
+        <input id="dlSearchInput" class="hist-search" placeholder="Search filename…" oninput="debounceDlSearch()"/>
+        <div style="display:flex;gap:4px">
+          <button class="icon-btn" id="dlTabAll" onclick="switchDlTab('all')" style="font-size:11px;padding:4px 9px">All</button>
+          <button class="icon-btn" id="dlTabKtr" onclick="switchDlTab('ktr')" style="font-size:11px;padding:4px 9px" id="dlTabFile1">KTR</button>
+          <button class="icon-btn" id="dlTabKjb" onclick="switchDlTab('kjb')" style="font-size:11px;padding:4px 9px" id="dlTabFile2">KJB</button>
+          <button class="icon-btn" id="dlTabSql" onclick="switchDlTab('sql')" style="font-size:11px;padding:4px 9px">SQL</button>
+        </div>
+        <button class="modal-close" onclick="closeModal('downloadsModal')">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+        <div id="dlSummary" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        <div style="display:flex;gap:6px">
+          <button class="icon-btn" id="dlZipBtn" onclick="downloadSelected()" style="font-size:11px;padding:4px 10px" disabled>⬇ Download Selected</button>
+          <button class="icon-btn" onclick="selectAllDl()" style="font-size:11px;padding:4px 10px">☑ Select All</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:rgba(var(--accent-rgb),.06);border:1px solid rgba(var(--accent-rgb),.18);border-radius:8px;margin-bottom:10px;font-size:11.5px;color:var(--accent-muted);">
+        <span style="font-size:13px">💡</span> Click any file row to preview its full content inside a viewer
+      </div>
+      <div id="dlGrid" style="display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;">
+        <div style="text-align:center;color:var(--muted);padding:2rem">Loading…</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;font-size:12px;color:var(--muted)">
+        <span id="dlPageInfo">—</span>
+        <div style="display:flex;gap:6px">
+          <button class="icon-btn" id="dlPrevBtn" onclick="dlChangePage(-1)" disabled>← Prev</button>
+          <button class="icon-btn" id="dlNextBtn" onclick="dlChangePage(+1)" disabled>Next →</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="mfooter-btn danger" onclick="deleteAllFiles()">🗑 Delete All</button>
+      <button class="mfooter-btn ghost" onclick="closeModal('downloadsModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     FILE PREVIEW MODAL
+══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="filePreviewModal" onclick="overlayClose(event,'filePreviewModal')" style="align-items:flex-start;padding-top:3vh;z-index:1100">
+  <div class="modal" style="max-width:820px;width:100%">
+    <div class="modal-head" style="gap:10px">
+      <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
+        <span id="previewTypeBadge" class="td-badge tdb-ktr" style="flex-shrink:0;font-size:11px;padding:3px 10px">KTR</span>
+        <h3 id="previewTitle" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px;max-width:400px">File Preview</h3>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px;flex-shrink:0">
+        <button class="icon-btn" id="previewWrapBtn" onclick="togglePreviewWrap()" style="font-size:11px;padding:4px 9px">↩ Wrap</button>
+        <button class="icon-btn" id="previewCopyBtn" onclick="copyPreviewContent()" style="font-size:11px;padding:4px 10px">📋 Copy</button>
+        <a class="icon-btn" id="previewDownloadLink" download style="font-size:11px;padding:4px 10px;text-decoration:none;cursor:pointer">⬇ Download</a>
+        <button class="modal-close" onclick="closeModal('filePreviewModal')">✕</button>
+      </div>
+    </div>
+    <div id="previewMeta" class="preview-meta-bar"><span>—</span></div>
+    <div class="modal-body" style="padding:0;overflow:hidden">
+      <div id="previewLoadingState" class="preview-skeleton">
+        <span class="skeleton sk-line" style="width:60%"></span>
+        <span class="skeleton sk-line" style="width:80%"></span>
+        <span class="skeleton sk-line" style="width:50%"></span>
+        <span class="skeleton sk-line" style="width:70%"></span>
+        <span class="skeleton sk-line" style="width:40%"></span>
+      </div>
+      <div id="previewErrorState" style="display:none;padding:1.5rem 1.3rem">
+        <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:9px;padding:14px 16px">
+          <div style="font-size:13px;font-weight:600;color:#fca5a5;margin-bottom:6px">✗ Could not load file content</div>
+          <div id="previewErrorMsg" style="font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.6"></div>
+          <a id="previewErrorDl" href="#" download style="display:inline-block;margin-top:10px;font-size:12px;color:#7dd3fc">⬇ Try downloading directly instead</a>
+        </div>
+      </div>
+      <textarea id="previewCodeArea" readonly spellcheck="false" class="preview-code-area" style="display:none"></textarea>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;align-items:center">
+      <div style="display:flex;gap:14px;font-size:11px;color:var(--muted)">
+        <span id="previewLineCount"></span>
+        <span id="previewByteCount"></span>
+        <span id="previewCharCount"></span>
+      </div>
+      <button class="mfooter-btn ghost" onclick="closeModal('filePreviewModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     ABOUT MODAL
+══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="aboutModal" onclick="overlayClose(event,'aboutModal')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head"><h3>ℹ️ About This Platform</h3><button class="modal-close" onclick="closeModal('aboutModal')">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:1rem">
+        A unified AI-powered ETL file generation platform supporting two major data integration tools, powered by Anthropic Claude.
+      </p>
+      <!-- Pentaho Card -->
+      <div class="about-platform-card">
+        <div class="apc-icon" style="background:rgba(79,70,229,.15);border:1px solid rgba(79,70,229,.25)">⚙️</div>
+        <div>
+          <div class="apc-title">Pentaho PDI (Kettle)</div>
+          <div class="apc-desc">Generate KTR transformations, KJB job files, SQL scripts, and full ETL pipelines. Includes Table Builder, Join Builder, and schema design tools.</div>
+        </div>
+      </div>
+      <!-- Talend Card -->
+      <div class="about-platform-card">
+        <div class="apc-icon" style="background:rgba(230,82,15,.13);border:1px solid rgba(230,82,15,.25)">🟠</div>
+        <div>
+          <div class="apc-title">Talend Studio + Qlik Sense</div>
+          <div class="apc-desc">Generate Talend project ZIPs, data integration jobs, routes, and Qlik Sense .qvs scripts for analytics and BI pipelines.</div>
+        </div>
+      </div>
+      <div class="about-stat-row">
+        <div class="about-stat"><div class="about-stat-val" id="aboutTotalCalls">—</div><div class="about-stat-lab">Total API Calls</div></div>
+        <div class="about-stat"><div class="about-stat-val" id="aboutTotalFiles">—</div><div class="about-stat-lab">Files Generated</div></div>
+        <div class="about-stat"><div class="about-stat-val" id="aboutRate">—</div><div class="about-stat-lab">Success Rate</div></div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:1rem;margin-top:.5rem">
+        <div class="info-row"><span class="ir-key">Version</span><span class="ir-val">v1.0</span></div>
+        <div class="info-row"><span class="ir-key">Tech Stack</span><span class="ir-val" style="font-family:var(--sans)">Django 4 · PostgreSQL · Claude AI</span></div>
+        <div class="info-row"><span class="ir-key">API Provider</span><span class="ir-val" style="font-family:var(--sans)">Anthropic · claude-sonnet-4</span></div>
+        <div class="info-row"><span class="ir-key">Built by</span><span class="ir-val" style="font-family:var(--sans)">Gain Insights</span></div>
+        <div class="info-row"><span class="ir-key">Active Platform</span><span class="ir-val ok" id="aboutActivePlatform">Pentaho PDI</span></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="mfooter-btn ghost" onclick="openModal('apiModal');closeModal('aboutModal')">🔑 API Settings</button>
+      <button class="mfooter-btn ghost" onclick="openModal('prefModal');closeModal('aboutModal')">⚙️ Preferences</button>
+      <button class="mfooter-btn primary" onclick="closeModal('aboutModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     DOCUMENTATION MODAL (Pentaho)
+══════════════════════════════════════════════════════ -->
+<div class="docs-modal-overlay" id="docsModal" onclick="docsOverlayClose(event)">
+  <div class="docs-modal">
+    <div class="docs-hdr">
+      <div class="docs-hdr-left">
+        <div class="docs-hdr-icon">📖</div>
+        <div>
+          <h2>Pentaho AI — Full Documentation</h2>
+          <p>Installation guide, API reference &amp; developer notes</p>
+          <div class="docs-hdr-badge"><span class="docs-hdr-badge-dot"></span> v1.0 · Live</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="docs-dl-btn" id="docsDlBtn" onclick="downloadDocumentation()">📄 Download .docx</button>
+        <span class="docs-kbd">Press <kbd>?</kbd> · <kbd>Esc</kbd> to close</span>
+        <button class="modal-close" onclick="closeDocs()" style="font-size:20px">✕</button>
+      </div>
+    </div>
+    <div class="docs-searchbar">
+      <span class="docs-searchbar-ico">🔍</span>
+      <input class="docs-search-inp" id="docsSearchInp" placeholder="Search documentation…" oninput="docsSearch(this.value)"/>
+    </div>
+    <div class="docs-body">
+      <nav class="docs-nav" id="docsNav">
+        <div class="docs-nav-grp">
+          <div class="docs-nav-grp-lbl">Getting Started</div>
+          <button class="docs-nav-item active" id="dn-overview" onclick="switchDoc('overview')"><span class="ni">🏠</span> Overview</button>
+          <button class="docs-nav-item" id="dn-prerequisites" onclick="switchDoc('prerequisites')"><span class="ni">✅</span> Prerequisites</button>
+          <button class="docs-nav-item" id="dn-python" onclick="switchDoc('python')"><span class="ni">🐍</span> Python Install</button>
+          <button class="docs-nav-item" id="dn-django" onclick="switchDoc('django')"><span class="ni">🟢</span> Django Setup</button>
+          <button class="docs-nav-item" id="dn-project" onclick="switchDoc('project')"><span class="ni">📁</span> Project Setup</button>
+          <button class="docs-nav-item" id="dn-database" onclick="switchDoc('database')"><span class="ni">🗄</span> Database</button>
+          <button class="docs-nav-item" id="dn-running" onclick="switchDoc('running')"><span class="ni">▶</span> Running App</button>
+        </div>
+        <div class="docs-nav-grp">
+          <div class="docs-nav-grp-lbl">Features</div>
+          <button class="docs-nav-item" id="dn-generator" onclick="switchDoc('generator')"><span class="ni">⚙️</span> File Generator <span class="docs-nav-new">AI New</span></button>
+          <button class="docs-nav-item" id="dn-ktrkjb" onclick="switchDoc('ktrkjb')"><span class="ni">🔄</span> KTR / KJB <span class="docs-nav-old">Old Version</span></button>
+          <button class="docs-nav-item" id="dn-tablebuilder" onclick="switchDoc('tablebuilder')"><span class="ni">🗄</span> Table Builder</button>
+          <button class="docs-nav-item" id="dn-joinbuilder" onclick="switchDoc('joinbuilder')"><span class="ni">🔗</span> Join Builder</button>
+          <button class="docs-nav-item" id="dn-dashboard" onclick="switchDoc('dashboard')"><span class="ni">📊</span> Dashboard</button>
+          <button class="docs-nav-item" id="dn-downloads" onclick="switchDoc('downloads')"><span class="ni">📦</span> Downloads</button>
+        </div>
+        <div class="docs-nav-grp">
+          <div class="docs-nav-grp-lbl">API Reference</div>
+          <button class="docs-nav-item" id="dn-endpoints" onclick="switchDoc('endpoints')"><span class="ni">📡</span> Endpoints</button>
+          <button class="docs-nav-item" id="dn-apisettings" onclick="switchDoc('apisettings')"><span class="ni">🔑</span> API Settings</button>
+          <button class="docs-nav-item" id="dn-models" onclick="switchDoc('models')"><span class="ni">🏗</span> DB Models</button>
+        </div>
+        <div class="docs-nav-grp">
+          <div class="docs-nav-grp-lbl">Reference</div>
+          <button class="docs-nav-item" id="dn-config" onclick="switchDoc('config')"><span class="ni">⚙️</span> Configuration</button>
+          <button class="docs-nav-item" id="dn-troubleshooting" onclick="switchDoc('troubleshooting')"><span class="ni">🔧</span> Troubleshooting</button>
+          <button class="docs-nav-item" id="dn-security" onclick="switchDoc('security')"><span class="ni">🔒</span> Security</button>
+          <button class="docs-nav-item" id="dn-faq" onclick="switchDoc('faq')"><span class="ni">❓</span> FAQ</button>
+        </div>
+      </nav>
+      <div class="docs-content" id="docsContent">
+        <div class="docs-sec active" id="dc-overview">
+          <div class="dh1">🏠 Overview</div>
+          <div class="dlead">Pentaho AI is an intelligent ETL file generation platform powered by Anthropic's Claude AI. It automates creation of Pentaho Data Integration files — KTR transformations, KJB jobs, and SQL — from natural-language descriptions or uploaded schemas.</div>
+          <div class="d-cards">
+            <div class="d-card"><div class="d-card-ico">⚙️</div><div class="d-card-t">File Generator</div><div class="d-card-d">AI-powered KTR + KJB generation from step instructions.</div></div>
+            <div class="d-card"><div class="d-card-ico">🔄</div><div class="d-card-t">KTR / KJB Upload</div><div class="d-card-d">Upload instructions → download ready-to-use Pentaho files.</div></div>
+            <div class="d-card"><div class="d-card-ico">🗄</div><div class="d-card-t">Table Builder</div><div class="d-card-d">AI-driven schema creation with smart SQL type inference.</div></div>
+            <div class="d-card"><div class="d-card-ico">🔗</div><div class="d-card-t">Join Builder</div><div class="d-card-d">Multi-table JOIN pipeline builder with live SQL execution.</div></div>
+            <div class="d-card"><div class="d-card-ico">📊</div><div class="d-card-t">Dashboard</div><div class="d-card-d">Live metrics: API calls, tokens, success rate, history.</div></div>
+            <div class="d-card"><div class="d-card-ico">📦</div><div class="d-card-t">Downloads</div><div class="d-card-d">Manage and bulk-download all generated files as ZIP.</div></div>
+          </div>
+          <div class="d-callout note"><span class="d-ico">💡</span><div><strong>Tech stack:</strong> Django 4.x + Python 3.10 + PostgreSQL + Anthropic Claude API</div></div>
+          <div class="dh2">📥 Quick Start Summary</div>
+          <div class="d-steps">
+            <div class="d-step"><div class="d-step-n">1</div><div><div class="d-step-t">Install Python 3.10+ and create a virtual environment</div><div class="d-step-d">See the Python Install section for platform-specific instructions.</div></div></div>
+            <div class="d-step"><div class="d-step-n">2</div><div><div class="d-step-t">Install Django and dependencies via pip</div><div class="d-step-d"><code style="font-family:var(--mono);font-size:11px;color:#7dd3fc">pip install -r requirements.txt</code></div></div></div>
+            <div class="d-step"><div class="d-step-n">3</div><div><div class="d-step-t">Configure settings.py with your API key and DB credentials</div><div class="d-step-d">Set ANTHROPIC_API_KEY, ANTHROPIC_MODEL, and DATABASES.</div></div></div>
+            <div class="d-step"><div class="d-step-n">4</div><div><div class="d-step-t">Run migrations and create a superuser</div><div class="d-step-d"><code style="font-family:var(--mono);font-size:11px;color:#7dd3fc">python manage.py migrate && python manage.py createsuperuser</code></div></div></div>
+            <div class="d-step"><div class="d-step-n">5</div><div><div class="d-step-t">Start the development server</div><div class="d-step-d"><code style="font-family:var(--mono);font-size:11px;color:#7dd3fc">python manage.py runserver</code> → http://127.0.0.1:8000/</div></div></div>
+          </div>
+        </div>
+        <div class="docs-sec" id="dc-prerequisites">
+          <div class="dh1">✅ Prerequisites</div>
+          <div class="dlead">Ensure the following are installed before beginning.</div>
+          <table class="d-table"><thead><tr><th>Software</th><th>Min Version</th><th>Purpose</th><th>Required?</th></tr></thead><tbody>
+            <tr><td><strong>Python</strong></td><td><code class="dpath">3.10+</code></td><td class="ddesc">Backend runtime</td><td><span class="db db-r">Required</span></td></tr>
+            <tr><td><strong>pip</strong></td><td><code class="dpath">23+</code></td><td class="ddesc">Package installer</td><td><span class="db db-r">Required</span></td></tr>
+            <tr><td><strong>PostgreSQL</strong></td><td><code class="dpath">13+</code></td><td class="ddesc">Primary database</td><td><span class="db db-r">Required</span></td></tr>
+            <tr><td><strong>Git</strong></td><td><code class="dpath">2.x</code></td><td class="ddesc">Version control</td><td><span class="db db-a">Optional</span></td></tr>
+            <tr><td><strong>Anthropic API Key</strong></td><td><code class="dpath">—</code></td><td class="ddesc">AI generation (sk-ant-...)</td><td><span class="db db-r">Required</span></td></tr>
+          </tbody></table>
+          <div class="d-callout info"><span class="d-ico">ℹ️</span><div>Get your Anthropic API key from <code style="font-family:var(--mono);font-size:11px">https://console.anthropic.com</code></div></div>
+        </div>
+        <div class="docs-sec" id="dc-python">
+          <div class="dh1">🐍 Python Installation</div>
+          <div class="dh2">🪟 Windows</div>
+          <div class="d-steps">
+            <div class="d-step"><div class="d-step-n">1</div><div><div class="d-step-t">Download Python</div><div class="d-step-d">Go to <code style="font-family:var(--mono);font-size:11px;color:#7dd3fc">https://www.python.org/downloads/</code> — download 3.10+ (64-bit).</div></div></div>
+            <div class="d-step"><div class="d-step-n">2</div><div><div class="d-step-t">Install with PATH checked</div><div class="d-step-d">Tick <em>"Add Python to PATH"</em> before clicking Install.</div></div></div>
+            <div class="d-step"><div class="d-step-n">3</div><div><div class="d-step-t">Verify</div><div class="d-step-d"><code style="font-family:var(--mono);font-size:11px;color:#7dd3fc">python --version && pip --version</code></div></div></div>
+          </div>
+          <div class="dh2">🍎 macOS</div>
+          <div class="d-code"><button class="d-copy" onclick="dCopy(this)">📋 Copy</button>brew install python@3.11
+python3 --version</div>
+          <div class="dh2">🐧 Linux (Ubuntu/Debian)</div>
+          <div class="d-code"><button class="d-copy" onclick="dCopy(this)">📋 Copy</button>sudo apt update
+sudo apt install python3.11 python3.11-venv python3-pip -y</div>
+          <div class="dh2">🔒 Virtual Environment (Recommended)</div>
+          <div class="d-code"><button class="d-copy" onclick="dCopy(this)">📋 Copy</button><span class="cmt"># Create</span>
+python -m venv venv
+
+<span class="cmt"># Activate — Windows</span>
+venv\Scripts\activate
+
+<span class="cmt"># Activate — macOS/Linux</span>
+source venv/bin/activate</div>
+          <div class="d-callout warn"><span class="d-ico">⚠️</span><div>Always activate the virtual environment before running project commands.</div></div>
+        </div>
+        <div class="docs-sec" id="dc-django">
+          <div class="dh1">🟢 Django &amp; Dependencies</div>
+          <div class="dlead">With your virtual environment active, install all required packages.</div>
+          <div class="dh2">📦 Install All at Once</div>
+          <div class="d-code"><button class="d-copy" onclick="dCopy(this)">📋 Copy</button>pip install -r requirements.txt</div>
+          <div class="dh2">📦 Install Individually</div>
+          <div class="d-code"><button class="d-copy" onclick="dCopy(this)">📋 Copy</button>pip install django
+pip install requests
+pip install psycopg2-binary
+pip install urllib3
+pip install pymysql
+pip install oracledb
+pip install pyodbc
+pip install sqlalchemy</div>
+          <div class="dh2">✅ Verify</div>
+          <div class="d-code"><button class="d-copy" onclick="dCopy(this)">📋 Copy</button>python -m django --version</div>
+        </div>
+        <div class="docs-sec" id="dc-project">
+          <div class="dh1">📁 Project Setup</div>
+          <div class="dh2">⚙️ settings.py — Required Config</div>
+          <div class="d-code"><button class="d-copy" onclick="dCopy(this)">📋 Copy</button><span class="cmt"># Anthropic AI</span>
+ANTHROPIC_API_KEY = <span class="str">"sk-ant-your-key-here"</span>
+ANTHROPIC_MODEL   = <span class="str">"claude-sonnet-4-20250514"</span>
+
+<span class="cmt"># PostgreSQL</span>
+DATABASES = {
+    <span class="str">"default"</span>: {
+        <span class="str">"ENGINE"</span>:   <span class="str">"django.db.backends.postgresql"</span>,
+        <span class="str">"NAME"</span>:     <span class="str">"pentaho_db"</span>,
+        <span class="str">"USER"</span>:     <span class="str">"postgres"</span>,
+        <span class="str">"PASSWORD"</span>: <span class="str">"your-password"</span>,
+        <span class="str">"HOST"</span>:     <span class="str">"localhost"</span>,
+        <span class="str">"PORT"</span>:     <span class="str">"5432"</span>,
+    }
+}
+
+MEDIA_URL  = <span class="str">"/media/"</span>
+MEDIA_ROOT = BASE_DIR / <span class="str">"media"</span></div>
+          <div class="d-callout warn"><span class="d-ico">⚠️</span><div>Never commit ANTHROPIC_API_KEY to version control. Use <code style="font-family:var(--mono);font-size:11px">.env</code> files.</div></div>
+        </div>
+        <div class="docs-sec" id="dc-database">
+          <div class="dh1">🗄 Database Setup</div>
+          <div class="dh2">🐘 PostgreSQL — Create DB</div>
+          <div class="d-code"><button class="d-copy" onclick="dCopy(this)">📋 Copy</button><span class="kw">CREATE DATABASE</span> pentaho_db;
+<span class="kw">CREATE USER</span> pentaho_user <span class="kw">WITH PASSWORD</span> <span class="str">'yourpassword'</span>;
+<span class="kw">GRANT ALL PRIVILEGES ON DATABASE</span> pentaho_db <span class="kw">TO</span> pentaho_user;</div>
+          <div class="dh2">🔄 Run Django Migrations</div>
+          <div class="d-code"><button class="d-copy" onclick="dCopy(this)">📋 Copy</button>python manage.py makemigrations
+python manage.py migrate</div>
+          <div class="dh2">👤 Create Superuser</div>
+          <div class="d-code"><button class="d-copy" onclick="dCopy(this)">📋 Copy</button>python manage.py createsuperuser</div>
+          <div class="d-callout tip"><span class="d-ico">✅</span><div>The superuser credentials are used to log into the dashboard at <code style="font-family:var(--mono);font-size:11px">/</code>.</div></div>
+        </div>
+        <div class="docs-sec" id="dc-running">
+          <div class="dh1">▶ Running the Application</div>
+          <div class="dh2">🚀 Development Server</div>
+          <div class="d-code"><button class="d-copy" onclick="dCopy(this)">📋 Copy</button>python manage.py runserver</div>
+          <div class="dp">Open: <code style="font-family:var(--mono);font-size:11px;color:#7dd3fc">http://127.0.0.1:8000/</code></div>
+          <div class="dh2">🌐 Pages</div>
+          <table class="d-table"><thead><tr><th>Page</th><th>URL</th></tr></thead><tbody>
+            <tr><td>Login</td><td><code class="dpath">/</code></td></tr>
+            <tr><td>Dashboard</td><td><code class="dpath">/dashboard/</code></td></tr>
+            <tr><td>File Generator</td><td><code class="dpath">/generate-pentaho/</code></td></tr>
+            <tr><td>KTR / KJB Upload</td><td><code class="dpath">/upload_tr/</code></td></tr>
+            <tr><td>Table Builder</td><td><code class="dpath">/table-builder/</code></td></tr>
+            <tr><td>Join Builder</td><td><code class="dpath">/table-joins/</code></td></tr>
+            <tr><td>Talend Generator</td><td><code class="dpath">/talend/</code></td></tr>
+            <tr><td>Admin Panel</td><td><code class="dpath">/admin/</code></td></tr>
+          </tbody></table>
+          <div class="d-callout warn"><span class="d-ico">⚠️</span><div>For production set <code style="font-family:var(--mono);font-size:11px">DEBUG = False</code> and use gunicorn/nginx.</div></div>
+        </div>
+        <div class="docs-sec" id="dc-generator"><div class="dh1">⚙️ File Generator</div><div class="dlead">Generates KTR + KJB files from step-based instructions. Access at <code style="font-family:var(--mono);font-size:12px;color:#7dd3fc">/generate-pentaho/</code>.</div></div>
+        <div class="docs-sec" id="dc-ktrkjb"><div class="dh1">🔄 KTR / KJB Upload</div><div class="dlead">Generate a single transformation or job file. Access at <code style="font-family:var(--mono);font-size:12px;color:#7dd3fc">/upload_tr/</code>.</div></div>
+        <div class="docs-sec" id="dc-tablebuilder"><div class="dh1">🗄 Table Builder</div><div class="dlead">Three-step wizard: upload instructions → review SQL → create table live. Access at <code style="font-family:var(--mono);font-size:12px;color:#7dd3fc">/table-builder/</code>.</div></div>
+        <div class="docs-sec" id="dc-joinbuilder"><div class="dh1">🔗 Join Builder</div><div class="dlead">Upload a structured steps file to generate multi-table JOIN pipelines. Access at <code style="font-family:var(--mono);font-size:12px;color:#7dd3fc">/table-joins/</code>.</div></div>
+        <div class="docs-sec" id="dc-dashboard"><div class="dh1">📊 Dashboard</div><div class="dlead">Real-time analytics for the entire platform. Supports both Pentaho and Talend modes via the platform switcher.</div></div>
+        <div class="docs-sec" id="dc-downloads"><div class="dh1">📦 Downloads</div><div class="dlead">All generated files are stored server-side. Click any file row to preview its content inline.</div></div>
+        <div class="docs-sec" id="dc-endpoints"><div class="dh1">📡 API Endpoints</div><div class="dlead">All POST endpoints require <code style="font-family:var(--mono);font-size:12px;color:#7dd3fc">X-CSRFToken</code> header.</div></div>
+        <div class="docs-sec" id="dc-apisettings"><div class="dh1">🔑 API Settings</div><div class="dlead">Configure your Anthropic API key and model per-user via Settings modal.</div></div>
+        <div class="docs-sec" id="dc-models"><div class="dh1">🏗 Database Models</div><div class="dp">GenerationLog · GeneratedFile · UserApiSettings</div></div>
+        <div class="docs-sec" id="dc-config"><div class="dh1">⚙️ Configuration Reference</div><div class="dp">See settings.py for all configurable values.</div></div>
+        <div class="docs-sec" id="dc-troubleshooting">
+          <div class="dh1">🔧 Troubleshooting</div>
+          <div class="dh2">Common Issues</div>
+          <div class="d-callout warn"><span class="d-ico">⚠️</span><div><strong>API key invalid:</strong> Ensure your key starts with <code style="font-family:var(--mono);font-size:11px">sk-ant-</code> and has sufficient credits.</div></div>
+          <div class="d-callout warn"><span class="d-ico">⚠️</span><div><strong>DB connection error:</strong> Verify PostgreSQL is running and credentials in settings.py are correct.</div></div>
+          <div class="d-callout info"><span class="d-ico">ℹ️</span><div><strong>Timeout errors:</strong> Increase the timeout value in API Settings modal for large generations.</div></div>
+        </div>
+        <div class="docs-sec" id="dc-security">
+          <div class="dh1">🔒 Security Notes</div>
+          <div class="d-callout warn"><span class="d-ico">⚠️</span><div>Never expose your Anthropic API key in client-side code or version control.</div></div>
+          <div class="d-callout warn"><span class="d-ico">⚠️</span><div>SSL verification is disabled by default for local development. Enable for production.</div></div>
+          <div class="d-callout tip"><span class="d-ico">✅</span><div>Use Django's built-in CSRF protection for all POST endpoints.</div></div>
+        </div>
+        <div class="docs-sec" id="dc-faq">
+          <div class="dh1">❓ FAQ</div>
+          <div class="dh3">Can I use both Pentaho and Talend at the same time?</div>
+          <div class="dp">Yes — use the platform switcher in the top bar to toggle between platforms. Each platform has its own stats URL and file types.</div>
+          <div class="dh3">Where are generated files stored?</div>
+          <div class="dp">Files are stored in the MEDIA_ROOT directory defined in settings.py. Access them via the Downloads modal.</div>
+          <div class="dh3">Which Claude model should I use?</div>
+          <div class="dp">Claude Sonnet 4 is recommended for best speed/quality balance. Opus 4 for complex pipelines, Haiku 4.5 for fast previews.</div>
+        </div>
+      </div>
+    </div>
+    <div class="docs-ftr">
+      <div class="docs-ftr-l">AI ETL Platform · <strong>Gain Insights</strong> · Pentaho + Talend · v1.0</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="docs-dl-btn" onclick="downloadDocumentation()">📄 Download Full Docs (.docx)</button>
+        <button class="mfooter-btn ghost" onclick="closeDocs()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════ -->
+<script>
+/* ── Platform Config ── */
+const PLATFORM_CONFIG = {
+  pentaho: {
+    statsUrl:      "{% url 'dashboard_stats' %}",
+    clearUrl:      "{% url 'dashboard_clear_history' %}",
+    historyUrl:    "/dashboard/history/",
+    detailUrl:     "/dashboard/history/",
+    title:         "Pentaho Dashboard",
+    subtitle:      "Pentaho PDI · AI File Generator",
+    platform:      "Pentaho PDI",
+    accentCss:     "plat-pentaho",
+    file1Label:    "KTR Files",
+    file2Label:    "KJB Files",
+    file1Key:      "ktr_count",
+    file2Key:      "kjb_count",
+    stepsLabel:    "Steps",
+    histTabs:      [
+      {id:"tabAll",  type:"all", label:"All"},
+      {id:"tabKtr",  type:"ktr", label:"KTR"},
+      {id:"tabKjb",  type:"kjb", label:"KJB"},
+    ],
+    badgeColor:    "rgba(79,70,229,.18)",
+    badgeText:     "#a5b4fc",
+    badgeLabel:    "Pentaho",
+    actTypeMap:    {ktr:"ktr", kjb:"kjb", sql:"sql", err:"err"},
+    histBadgeMap:  {ktr:"tdb-ktr", kjb:"tdb-kjb", sql:"tdb-sql", zip:"tdb-zip"},
+  },
+  talend: {
+    statsUrl:      "{% url 'dashboard_talend_stats' %}",
+    clearUrl:      "{% url 'dashboard_clear_history' %}",
+    historyUrl:    "/dashboard/history/",
+    detailUrl:     "/dashboard/history/",
+    title:         "Talend · Qlik Dashboard",
+    subtitle:      "Talend Studio + Qlik Sense · AI Platform",
+    platform:      "Talend · Qlik",
+    accentCss:     "plat-talend",
+    file1Label:    "Talend Projects",
+    file2Label:    "Qlik Scripts",
+    file1Key:      "ktr_count",
+    file2Key:      "kjb_count",
+    stepsLabel:    "Components",
+    histTabs:      [
+      {id:"tabAll",     type:"all",  label:"All"},
+      {id:"tabProcess", type:"proc", label:"Talend"},
+      {id:"tabQvs",     type:"qvs",  label:"Qlik"},
+    ],
+    badgeColor:    "rgba(230,82,15,.15)",
+    badgeText:     "#ffb380",
+    badgeLabel:    "Talend",
+    actTypeMap:    {ktr:"process", kjb:"qvs", sql:"connection", err:"err"},
+    histBadgeMap:  {ktr:"tdb-process", kjb:"tdb-qvs", sql:"tdb-conn", zip:"tdb-zip", item:"tdb-item"},
+  }
+};
+
+let curPlat = localStorage.getItem('activePlatform') || 'pentaho';
+let REAL_KEY, keyVisible = false, statsCache = null, refreshInterval = null;
+const CSRF_TOKEN = "{{ csrf_token }}";
+const MASKED_KEY = "sk-ant-••••••••••••••••••••••••";
+
+/* ════ PLATFORM SWITCH ════ */
+function switchPlatform(plat) {
+  curPlat = plat;
+  localStorage.setItem('activePlatform', plat);
+  const cfg = PLATFORM_CONFIG[plat];
+
+  /* body class → CSS variable theme */
+  document.body.className = cfg.accentCss;
+
+  /* Switcher buttons */
+  document.getElementById('pswPentaho').className = 'psw-btn' + (plat === 'pentaho' ? ' active-p' : '');
+  document.getElementById('pswTalend').className  = 'psw-btn' + (plat === 'talend'  ? ' active-t' : '');
+
+  /* Sidebars */
+  document.getElementById('sidebarPentaho').style.display = plat === 'pentaho' ? '' : 'none';
+  document.getElementById('sidebarTalend').style.display  = plat === 'talend'  ? '' : 'none';
+
+  /* Top bar buttons */
+  document.querySelectorAll('.pent-only').forEach(el => el.style.display = plat === 'pentaho' ? '' : 'none');
+  document.querySelectorAll('.tald-only').forEach(el => el.style.display = plat === 'talend'  ? '' : 'none');
+
+  /* Quick actions */
+  document.getElementById('qaGridPentaho').style.display = plat === 'pentaho' ? '' : 'none';
+  document.getElementById('qaGridTalend').style.display  = plat === 'talend'  ? '' : 'none';
+
+  /* Endpoints */
+  document.getElementById('endpointsPentaho').style.display = plat === 'pentaho' ? '' : 'none';
+  document.getElementById('endpointsTalend').style.display  = plat === 'talend'  ? '' : 'none';
+
+  /* Labels */
+  document.getElementById('dashTitle').textContent      = cfg.title;
+  document.getElementById('connPlatform').textContent   = cfg.platform;
+  document.getElementById('footerPlatform').textContent = cfg.platform;
+  document.getElementById('uFile1Label').textContent    = cfg.file1Label;
+  document.getElementById('uFile2Label').textContent    = cfg.file2Label;
+  document.getElementById('thSteps').textContent        = cfg.stepsLabel;
+  document.getElementById('histThSteps').textContent    = cfg.stepsLabel;
+
+  /* History badge */
+  const hb = document.getElementById('histPlatBadge');
+  hb.textContent      = cfg.badgeLabel;
+  hb.style.background = cfg.badgeColor;
+  hb.style.color      = cfg.badgeText;
+
+  /* About modal platform */
+  document.getElementById('aboutActivePlatform').textContent = cfg.platform;
+
+  /* History modal tabs */
+  const tabsContainer = document.getElementById('histTabsContainer');
+  tabsContainer.innerHTML = cfg.histTabs.map(t =>
+    `<button class="icon-btn" id="${t.id}" onclick="switchHistTab('${t.type}')" style="font-size:11px;padding:4px 9px">${t.label}</button>`
+  ).join('');
+
+  /* Page title */
+  document.getElementById('pageTitle').textContent = `Dashboard — ${cfg.platform}`;
+
+  loadStats();
+}
+
+/* ════ TOAST ════ */
+function toast(msg, type = "ok") {
+  if (localStorage.getItem('pref_toast') === 'false') return;
+  const el = document.getElementById("toast");
+  if (!el) return;
+  el.textContent = msg; el.className = "toast show " + type;
+  if (el._t) clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("show"), 2800);
+}
+
+function setRefreshing(on) { document.getElementById("refreshBtn").classList.toggle("spinning", on); }
+
+/* ════ LOAD STATS ════ */
+async function loadStats() {
+  setRefreshing(true);
+  const cfg = PLATFORM_CONFIG[curPlat];
+  try {
+    const res = await fetch(cfg.statsUrl, { headers: { "X-CSRFToken": CSRF_TOKEN } });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const d = await res.json();
+    statsCache = d;
+    render(d);
+    toast("Dashboard refreshed", "ok");
+  } catch (e) {
+    toast("Failed to load stats: " + e.message, "err");
+  } finally { setRefreshing(false); }
+}
+
+/* ════ RENDER ════ */
+function render(d) {
+  const cfg = PLATFORM_CONFIG[curPlat];
+  document.getElementById("dashDate").textContent = new Date().toLocaleDateString("en-GB",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+
+  const shortModel = (d.model || "").replace("claude-", "");
+  if (document.getElementById("sbModel"))        document.getElementById("sbModel").textContent    = shortModel || "—";
+  if (document.getElementById("sbKtrCount"))     document.getElementById("sbKtrCount").textContent = d.ktr_count || 0;
+  if (document.getElementById("sbKjbCount"))     document.getElementById("sbKjbCount").textContent = d.kjb_count || 0;
+  if (document.getElementById("sbStatus"))       document.getElementById("sbStatus").innerHTML     = '<span style="color:var(--success)">● Connected</span>';
+  document.getElementById("modelName").textContent      = shortModel || "—";
+  document.getElementById("statTotalCalls").textContent = (d.total_calls  || 0).toLocaleString();
+  document.getElementById("statCallsDelta").textContent = "↑ " + (d.calls_delta || 0);
+  document.getElementById("statTotalFiles").textContent = (d.total_files  || 0).toLocaleString();
+  document.getElementById("statFilesDelta").textContent = "↑ " + (d.files_delta || 0);
+  const totalTok = (d.total_in_tok || 0) + (d.total_out_tok || 0);
+  document.getElementById("statTokens").textContent     = fmtNum(totalTok);
+  document.getElementById("statTokensSub").textContent  = fmtNum(d.total_in_tok) + " in · " + fmtNum(d.total_out_tok) + " out";
+  document.getElementById("statSuccessRate").textContent = (d.success_rate || 0) + "%";
+  document.getElementById("statFailCount").textContent   = (d.fail_count   || 0) + " failed";
+  const tc = d.total_calls || 0;
+  document.getElementById("uCalls").textContent    = tc + " calls";
+  document.getElementById("uInTokens").textContent = fmtNum(d.total_in_tok);
+  document.getElementById("uOutTokens").textContent= fmtNum(d.total_out_tok);
+  document.getElementById("uFile1").textContent    = d[cfg.file1Key] || 0;
+  document.getElementById("uFile2").textContent    = d[cfg.file2Key] || 0;
+  document.getElementById("dispMaxTokens").textContent = d.max_tokens || "—";
+  document.getElementById("dispTimeout").textContent   = (d.timeout || "—") + (d.timeout ? " s" : "");
+  REAL_KEY = d.api_key;
+  /* About modal */
+  document.getElementById("aboutTotalCalls").textContent = (d.total_calls || 0).toLocaleString();
+  document.getElementById("aboutTotalFiles").textContent = (d.total_files || 0).toLocaleString();
+  document.getElementById("aboutRate").textContent       = (d.success_rate || 0) + "%";
+  const maxFiles = Math.max((d[cfg.file1Key] || 0) + (d[cfg.file2Key] || 0), 1);
+  setTimeout(() => {
+    document.getElementById("uCallsBar").style.width  = Math.min(100, tc / Math.max(tc,1) * 100) + "%";
+    document.getElementById("uInBar").style.width     = Math.min(100, (d.total_in_tok  || 0) / 1000000 * 100) + "%";
+    document.getElementById("uOutBar").style.width    = Math.min(100, (d.total_out_tok || 0) / 500000  * 100) + "%";
+    document.getElementById("uFile1Bar").style.width  = Math.min(100, (d[cfg.file1Key] || 0) / maxFiles * 100) + "%";
+    document.getElementById("uFile2Bar").style.width  = Math.min(100, (d[cfg.file2Key] || 0) / maxFiles * 100) + "%";
+  }, 80);
+  renderMiniChart(d.daily    || []);
+  renderActivity(d.activity  || []);
+  renderHistory(d.history    || []);
+}
+
+function renderMiniChart(daily) {
+  const chart = document.getElementById("miniChart"), labels = document.getElementById("miniLabels");
+  const max = Math.max(...daily, 1), days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const today = (new Date().getDay() + 6) % 7;
+  chart.innerHTML = labels.innerHTML = "";
+  daily.forEach((v, i) => {
+    const pct = Math.max(4, Math.round((v / max) * 100));
+    const bar = document.createElement("div");
+    bar.className = "mc-bar" + (i === daily.length - 1 ? " today" : "");
+    bar.style.height = pct + "%";
+    bar.innerHTML = `<span class="mc-tip">${v} call${v !== 1 ? "s" : ""}</span>`;
+    chart.appendChild(bar);
+    const lbl = document.createElement("span");
+    lbl.textContent = days[(today - (daily.length - 1 - i) + 7) % 7];
+    labels.appendChild(lbl);
+  });
+}
+
+function renderActivity(items) {
+  const feed = document.getElementById("activityFeed");
+  const cfg = PLATFORM_CONFIG[curPlat];
+  if (!items.length) { feed.innerHTML = '<div style="font-size:13px;color:var(--muted);text-align:center;padding:12px 0">No activity yet.</div>'; return; }
+  feed.innerHTML = items.slice(0, 10).map(a => {
+    const cls = cfg.actTypeMap[a.type] || a.type;
+    return `<div class="activity-item">
+      <div class="ai-dot-wrap"><span class="ai-dot ${cls}"></span><span class="ai-line"></span></div>
+      <div class="ai-body">
+        <div class="ai-title"><span class="ai-badge ${cls}">${a.type.toUpperCase()}</span>&nbsp;${esc(a.name)}</div>
+        <div class="ai-meta"><span>${timeAgo(a.time_ms)}</span>${a.ok ? '<span style="color:var(--success)">✓ Success</span>' : '<span style="color:var(--error)">✗ Failed</span>'}${a.tokens ? `<span>${fmtNum(a.tokens)} tokens</span>` : ""}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderHistory(rows) {
+  const body = document.getElementById("historyBody");
+  const cfg = PLATFORM_CONFIG[curPlat];
+  if (!rows.length) { body.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:1.5rem">No generation history yet.</td></tr>`; return; }
+  body.innerHTML = rows.map(r =>
+    `<tr>
+      <td class="td-mono">#${r.id}</td>
+      <td>${esc(r.name)}</td>
+      <td><span class="td-badge ${cfg.histBadgeMap[r.type] || 'tdb-item'}">${r.type.toUpperCase()}</span></td>
+      <td class="td-mono">${r.steps}</td>
+      <td class="td-mono">${r.tokens ? fmtNum(r.tokens) : "—"}</td>
+      <td class="td-mono">${r.dur}</td>
+      <td><span class="td-badge ${r.ok ? "tdb-ok" : "tdb-err"}">${r.ok ? "OK" : "ERROR"}</span></td>
+      <td class="td-mono">${timeAgo(r.time_ms)}</td>
+    </tr>`).join("");
+}
+
+/* ════ HISTORY MODAL ════ */
+let histState = { type:"all", page:1, limit:50, search:"", total:0, totalPages:1 };
+let _searchTimer = null;
+
+function openHistory(type) {
+  const cfg = PLATFORM_CONFIG[curPlat];
+  histState.type = type; histState.page = 1; histState.search = "";
+  document.getElementById("histSearchInput").value = "";
+  document.getElementById("historyModalTitle").textContent = "📋 " + cfg.platform + " History";
+  highlightHistTab(type);
+  openModal("historyModal");
+  fetchHistory();
+}
+
+function switchHistTab(type) {
+  histState.type = type; histState.page = 1;
+  highlightHistTab(type);
+  fetchHistory();
+}
+
+function highlightHistTab(type) {
+  const cfg = PLATFORM_CONFIG[curPlat];
+  cfg.histTabs.forEach(t => {
+    const el = document.getElementById(t.id);
+    if (el) { el.style.borderColor = "var(--border)"; el.style.color = "var(--muted)"; }
+  });
+  const active = cfg.histTabs.find(t => t.type === type || (type === 'all' && t.type === 'all'));
+  if (active) {
+    const el = document.getElementById(active.id);
+    if (el) { el.style.borderColor = "var(--accent)"; el.style.color = "var(--accent-muted)"; }
+  }
+}
+
+function debounceSearch() {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => {
+    histState.search = document.getElementById("histSearchInput").value.trim();
+    histState.page = 1;
+    fetchHistory();
+  }, 350);
+}
+
+async function fetchHistory() {
+  const cfg = PLATFORM_CONFIG[curPlat];
+  const body = document.getElementById("histTableBody");
+  body.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1.5rem"><span class="skeleton" style="width:120px;height:14px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>`;
+  const params = new URLSearchParams({ type: histState.type, page: histState.page, limit: histState.limit, q: histState.search });
+  try {
+    const res = await fetch(`${cfg.historyUrl}?${params}`, { headers: { "X-CSRFToken": CSRF_TOKEN } });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    histState.total = data.total; histState.totalPages = data.total_pages;
+    renderHistoryModal(data);
+  } catch (e) { body.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--error);padding:1.5rem">✗ Failed: ${esc(e.message)}</td></tr>`; }
+}
+
+function renderHistoryModal(data) {
+  const cfg = PLATFORM_CONFIG[curPlat];
+  const ok = data.rows.filter(r => r.ok).length, fail = data.rows.filter(r => !r.ok).length;
+  document.getElementById("histSummary").innerHTML =
+    `<span class="chip chip-accent">Total: ${data.total}</span><span class="chip chip-green">✓ ${ok} success</span><span class="chip chip-red">✗ ${fail} failed</span>` +
+    (data.search ? `<span class="chip" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:#fbbf24">🔍 "${esc(data.search)}"</span>` : "");
+  const body = document.getElementById("histTableBody");
+  if (!data.rows.length) { body.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1.5rem">No records found.</td></tr>`; }
+  else {
+    body.innerHTML = data.rows.map(r =>
+      `<tr>
+        <td class="td-mono">#${r.id}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.name)}">${esc(r.name)}</td>
+        <td><span class="td-badge ${cfg.histBadgeMap[r.type] || 'tdb-item'}">${r.type.toUpperCase()}</span></td>
+        <td class="td-mono">${r.steps}</td>
+        <td class="td-mono">${r.tokens ? fmtNum(r.tokens) : "—"}</td>
+        <td class="td-mono">${r.dur}</td>
+        <td><span class="td-badge ${r.ok ? "tdb-ok" : "tdb-err"}">${r.ok ? "✓ OK" : "✗ ERR"}</span></td>
+        <td class="td-mono">${timeAgo(r.time_ms)}</td>
+        <td><button class="icon-btn" onclick="viewDetail(${r.id})" style="font-size:11px;padding:3px 7px">🔍</button></td>
+      </tr>`).join("");
+  }
+  const start = (data.page - 1) * data.limit + 1, end = Math.min(data.page * data.limit, data.total);
+  document.getElementById("histPageInfo").textContent = data.total ? `${start}–${end} of ${data.total}` : "No records";
+  document.getElementById("histPrevBtn").disabled = data.page <= 1;
+  document.getElementById("histNextBtn").disabled = data.page >= data.total_pages;
+}
+
+function histChangePage(delta) {
+  const p = histState.page + delta;
+  if (p < 1 || p > histState.totalPages) return;
+  histState.page = p; fetchHistory();
+}
+
+/* ════ RECORD DETAIL ════ */
+async function viewDetail(id) {
+  const cfg = PLATFORM_CONFIG[curPlat];
+  document.getElementById("detailTitle").textContent = `Record #${id}`;
+  document.getElementById("detailBody").innerHTML = `<div style="text-align:center;color:var(--muted);padding:1rem">Loading…</div>`;
+  openModal("histDetailModal");
+  try {
+    const res = await fetch(`${cfg.detailUrl}${id}/`, { headers: { "X-CSRFToken": CSRF_TOKEN } });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const r = await res.json();
+    document.getElementById("detailTitle").textContent = `${r.type.toUpperCase()} · ${r.name}`;
+    document.getElementById("detailBody").innerHTML =
+      `<div class="info-row"><span class="ir-key">Status</span><span class="ir-val ${r.ok ? "ok" : ""}" style="${!r.ok ? "color:var(--error);font-family:var(--sans)" : ""}">${r.ok ? "✓ Success" : "✗ Failed"}</span></div>
+      <div class="info-row"><span class="ir-key">Type</span><span class="ir-val"><span class="td-badge ${cfg.histBadgeMap[r.type] || 'tdb-item'}">${r.type.toUpperCase()}</span></span></div>
+      <div class="info-row"><span class="ir-key">${PLATFORM_CONFIG[curPlat].stepsLabel}</span><span class="ir-val">${r.steps}</span></div>
+      <div class="info-row"><span class="ir-key">Tokens (in/out)</span><span class="ir-val">${fmtNum(r.in_tokens)} / ${fmtNum(r.out_tokens)}</span></div>
+      <div class="info-row"><span class="ir-key">Duration</span><span class="ir-val">${r.dur}</span></div>
+      <div class="info-row"><span class="ir-key">Generated</span><span class="ir-val">${timeAgo(r.time_ms)}</span></div>` +
+      (r.error ? `<div style="margin-top:.75rem"><div class="form-label">Error</div><div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:10px 12px;color:#fca5a5;font-size:12px;font-family:var(--mono);white-space:pre-wrap;line-height:1.6">${esc(r.error)}</div></div>` : "") +
+      (r.xml_output ? `<div style="margin-top:.75rem"><div class="form-label" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">XML Output<button class="icon-btn" style="font-size:11px;padding:2px 8px" onclick="copyXml('xmlOut_${r.id}')">📋 Copy</button></div><textarea readonly class="form-input" style="height:160px;resize:vertical;white-space:pre;overflow:auto;font-size:11px;font-family:var(--mono)" id="xmlOut_${r.id}">${esc(r.xml_output)}</textarea></div>` : "") +
+      (r.prompt_used ? `<div style="margin-top:.75rem"><div class="form-label" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">Prompt Used<button class="icon-btn" style="font-size:11px;padding:2px 8px" onclick="copyXml('promptOut_${r.id}')">📋 Copy</button></div><textarea readonly class="form-input" style="height:160px;resize:vertical;white-space:pre;overflow:auto;font-size:11px;font-family:var(--mono)" id="promptOut_${r.id}">${esc(r.prompt_used)}</textarea></div>` : "");
+  } catch (e) { document.getElementById("detailBody").innerHTML = `<div style="color:var(--error);padding:1rem">✗ ${esc(e.message)}</div>`; }
+}
+
+function copyXml(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  navigator.clipboard.writeText(el.value).then(() => toast("Copied", "ok")).catch(() => toast("Copy failed", "err"));
+}
+
+/* ════ API KEY ════ */
+function toggleKey() {
+  keyVisible = !keyVisible;
+  document.getElementById("apiKeyDisplay").textContent = keyVisible ? (REAL_KEY || "(not set)") : MASKED_KEY;
+  document.getElementById("toggleKeyBtn").textContent  = keyVisible ? "🙈" : "👁";
+}
+function copyKey() {
+  if (!REAL_KEY) { toast("No API key configured", "err"); return; }
+  navigator.clipboard.writeText(REAL_KEY).then(() => toast("API key copied", "ok")).catch(() => toast("Copy failed", "err"));
+}
+
+/* ════ PING ════ */
+async function pingApi() {
+  const cfg = PLATFORM_CONFIG[curPlat];
+  const el = document.getElementById("connStatus");
+  el.textContent = "⏳ Pinging…";
+  try {
+    const res = await fetch(cfg.statsUrl);
+    if (res.ok) { el.innerHTML = '<span style="color:var(--success)">● Connected</span>'; toast("API reachable", "ok"); }
+    else throw new Error("HTTP " + res.status);
+  } catch (e) { el.innerHTML = '<span style="color:var(--error)">● Unreachable</span>'; toast("Ping failed: " + e.message, "err"); }
+}
+
+/* ════ CLEAR HISTORY ════ */
+async function clearHistory() {
+  const cfg = PLATFORM_CONFIG[curPlat];
+  if (!confirm("Delete all generation logs? This cannot be undone.")) return;
+  try {
+    const res = await fetch(cfg.clearUrl, { method: "POST", headers: { "X-CSRFToken": CSRF_TOKEN } });
+    const data = await res.json();
+    toast(`Cleared ${data.deleted} record(s)`, "ok");
+    await loadStats();
+    if (document.getElementById("historyModal").classList.contains("open")) fetchHistory();
+  } catch (e) { toast("Clear failed: " + e.message, "err"); }
+}
+
+/* ════ MODALS ════ */
+async function openModal(id) {
+  if (id === "apiModal") {
+    try {
+      const res = await fetch("/get-api-settings/");
+      const data = await res.json();
+      if (data.status === "ok") {
+        document.getElementById("apiKeyInput").value     = data.apiKey || "";
+        document.getElementById("modelSelect").value    = data.model || "claude-sonnet-4-20250514";
+        document.getElementById("maxTokensInput").value = data.maxTokens || 16000;
+        document.getElementById("timeoutInput").value   = data.timeout || 180;
+      }
+    } catch (err) { console.error("Failed to load API settings:", err); }
+  }
+  document.getElementById(id).classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove("open");
+  if (!document.querySelector(".modal-overlay.open,.docs-modal-overlay.open")) document.body.style.overflow = "";
+}
+function overlayClose(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
+function openSettings() { openModal("apiModal"); }
+
+/* ════ API KEY EYE ════ */
+let apiKeyInputVisible = false;
+function toggleApiKeyInput() {
+  apiKeyInputVisible = !apiKeyInputVisible;
+  document.getElementById("apiKeyInput").type      = apiKeyInputVisible ? "text" : "password";
+  document.getElementById("apiKeyEye").textContent = apiKeyInputVisible ? "🙈" : "👁";
+}
+
+/* ════ TEST API KEY ════ */
+async function testApiKey() {
+  const r = document.getElementById("apiTestResult");
+  r.className = "api-test-result info"; r.textContent = "⏳ Testing…";
+  const apiKey    = document.getElementById("apiKeyInput").value.trim();
+  const model     = document.getElementById("modelSelect").value;
+  const maxTokens = parseInt(document.getElementById("maxTokensInput").value) || 1000;
+  const timeout   = parseInt(document.getElementById("timeoutInput").value) || 60;
+  if (!apiKey) { r.className = "api-test-result err"; r.textContent = "✗ API key is empty"; return; }
+  try {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), timeout * 1000);
+    const res = await fetch("/test-api-key/", { method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF_TOKEN }, signal: controller.signal, body: JSON.stringify({ apiKey, model, max_tokens: maxTokens, timeout }) });
+    const data = await res.json();
+    if (res.ok && data.status === "ok") { r.className = "api-test-result ok"; r.textContent = `✓ ${model} connected successfully`; }
+    else { r.className = "api-test-result err"; r.textContent = "✗ " + (data.msg || "Unknown error"); }
+  } catch (e) { r.className = "api-test-result err"; r.textContent = "✗ " + (e.name === "AbortError" ? "Request timed out" : e.message); }
+}
+
+/* ════ SAVE/LOAD API SETTINGS ════ */
+function loadApiSettings() {
+  const model     = localStorage.getItem("pref_model")      || "claude-sonnet-4-20250514";
+  const maxTokens = localStorage.getItem("pref_max_tokens") || "16000";
+  const timeout   = localStorage.getItem("pref_timeout")    || "180";
+  const sel = document.getElementById("modelSelect");     if (sel) sel.value = model;
+  const mt  = document.getElementById("maxTokensInput");  if (mt)  mt.value  = maxTokens;
+  const to  = document.getElementById("timeoutInput");    if (to)  to.value  = timeout;
+  document.getElementById("dispMaxTokens").textContent = parseInt(maxTokens).toLocaleString();
+  document.getElementById("dispTimeout").textContent   = timeout + " s";
+}
+
+function saveApiSettings() {
+  const apiKey    = document.getElementById("apiKeyInput").value.trim();
+  const model     = document.getElementById("modelSelect").value;
+  const maxTokens = document.getElementById("maxTokensInput").value;
+  const timeout   = document.getElementById("timeoutInput").value;
+  fetch("/save-api-settings/", { method:"POST", headers:{"Content-Type":"application/json","X-CSRFToken":getCookie("csrftoken")}, body: JSON.stringify({ apiKey, model, maxTokens, timeout }) })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "ok") {
+        document.getElementById("dispMaxTokens").textContent = parseInt(maxTokens).toLocaleString();
+        document.getElementById("dispTimeout").textContent   = timeout + " s";
+        REAL_KEY = apiKey;
+        document.getElementById("modelName").textContent = model.startsWith('claude-') ? model.slice(7) : model;
+        closeModal("apiModal"); toast("API settings saved", "ok");
+      } else { toast("Error: " + data.msg, "err"); }
+    }).catch(err => toast("Request failed: " + err, "err"));
+}
+
+async function resetApiModal() {
+  try {
+    const res = await fetch("/config-api/"); const data = await res.json();
+    document.getElementById("apiKeyInput").value     = data.api_key;
+    document.getElementById("modelSelect").value    = data.model;
+    document.getElementById("maxTokensInput").value = data.max_tokens;
+    document.getElementById("timeoutInput").value   = data.timeout;
+    toast("Reset to default values", "ok");
+  } catch (err) { toast("Failed to load config", "err"); }
+}
+
+/* ════ PREFERENCES ════ */
+async function savePreferences() {
+  const data = {
+    refresh:       parseInt(document.getElementById("prefRefresh").value),
+    toast:         document.getElementById("prefToast").checked,
+    auto_download: document.getElementById("prefAutoDownload").checked,
+    debug:         document.getElementById("prefDebug").checked,
+    history_limit: document.getElementById("prefHistoryLimit").value,
+    folder_name:   document.getElementById("prefFolderName").value
+  };
+  try {
+    await fetch("/save-preferences/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+    localStorage.setItem("pref_refresh",       data.refresh);
+    localStorage.setItem("pref_toast",         data.toast);
+    localStorage.setItem("pref_auto_download", data.auto_download);
+    localStorage.setItem("pref_debug",         data.debug);
+    localStorage.setItem("pref_history_limit", data.history_limit);
+    localStorage.setItem("pref_folder_name",   data.folder_name);
+    if (refreshInterval) clearInterval(refreshInterval);
+    if (data.refresh > 0) refreshInterval = setInterval(loadStats, data.refresh * 1000);
+    closeModal("prefModal"); toast("Preferences saved", "ok");
+  } catch (err) { toast("Failed to save preferences", "err"); }
+}
+
+async function loadPreferences() {
+  try {
+    const res = await fetch("/get-preferences/");
+    const data = await res.json();
+    if (!data) return;
+    document.getElementById("prefRefresh").value        = data.refresh       ?? 60;
+    document.getElementById("prefToast").checked        = data.toast         ?? true;
+    document.getElementById("prefAutoDownload").checked = data.auto_download ?? true;
+    document.getElementById("prefDebug").checked        = data.debug         ?? false;
+    document.getElementById("prefHistoryLimit").value   = data.history_limit ?? 50;
+    document.getElementById("prefFolderName").value     = data.folder_name   ?? "";
+    if (data.refresh > 0) refreshInterval = setInterval(loadStats, data.refresh * 1000);
+  } catch(e) {}
+}
+
+/* ════ DOWNLOADS ════ */
+const DL_URL     = "/downloads/";
+const DL_ZIP_URL = "/downloads/zip/";
+const DL_STATS   = "/downloads/stats/";
+let dlState = { type:'all', page:1, limit:20, search:'', total:0, totalPages:1 };
+let _dlSearchTimer = null, dlSelected = new Set();
+
+async function openDownloads() {
+  dlState = { type:'all', page:1, limit:20, search:'', total:0, totalPages:1 };
+  dlSelected.clear();
+  document.getElementById('dlSearchInput').value = '';
+  highlightDlTab('all');
+  openModal('downloadsModal');
+  await fetchDownloads();
+}
+
+function switchDlTab(type) { dlState.type = type; dlState.page = 1; highlightDlTab(type); fetchDownloads(); }
+function highlightDlTab(type) {
+  ['dlTabAll','dlTabKtr','dlTabKjb','dlTabSql'].forEach(id => { const el = document.getElementById(id); if (el) { el.style.borderColor = 'var(--border)'; el.style.color = 'var(--muted)'; } });
+  const map = { all:'dlTabAll', ktr:'dlTabKtr', kjb:'dlTabKjb', sql:'dlTabSql' };
+  const a = document.getElementById(map[type]);
+  if (a) { a.style.borderColor = 'var(--accent)'; a.style.color = 'var(--accent-muted)'; }
+}
+
+function debounceDlSearch() {
+  clearTimeout(_dlSearchTimer);
+  _dlSearchTimer = setTimeout(() => { dlState.search = document.getElementById('dlSearchInput').value.trim(); dlState.page = 1; fetchDownloads(); }, 350);
+}
+
+async function fetchDownloads() {
+  const grid = document.getElementById('dlGrid');
+  grid.innerHTML = '<div style="text-align:center;color:var(--muted);padding:2rem">Loading…</div>';
+  const params = new URLSearchParams({ type: dlState.type, page: dlState.page, limit: dlState.limit, q: dlState.search });
+  try {
+    const res = await fetch(`${DL_URL}?${params}`, { headers: { 'X-CSRFToken': CSRF_TOKEN } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json(); dlState.total = data.total; dlState.totalPages = data.total_pages;
+    renderDownloads(data);
+  } catch(e) { grid.innerHTML = `<div style="color:var(--error);text-align:center;padding:2rem">✗ ${esc(e.message)}</div>`; }
+}
+
+function renderDownloads(data) {
+  document.getElementById('dlSummary').innerHTML =
+    `<span class="chip chip-accent">Files: ${data.total}</span>` +
+    (dlSelected.size > 0 ? `<span class="chip chip-green">${dlSelected.size} selected</span>` : '');
+  const grid = document.getElementById('dlGrid');
+  if (!data.rows.length) {
+    grid.innerHTML = '<div style="text-align:center;color:var(--muted);padding:2rem">No files found.</div>';
+    document.getElementById('dlPageInfo').textContent = 'No files';
+    document.getElementById('dlPrevBtn').disabled = true;
+    document.getElementById('dlNextBtn').disabled = true;
+    return;
+  }
+  const typeColors = { ktr:'#818cf8', kjb:'#86efac', sql:'#7dd3fc', zip:'#fbbf24' };
+  const typeBg     = { ktr:'rgba(79,70,229,.15)', kjb:'rgba(34,197,94,.12)', sql:'rgba(56,189,248,.12)', zip:'rgba(245,158,11,.12)' };
+  grid.innerHTML = data.rows.map(f => {
+    const isSelected = dlSelected.has(f.id);
+    const safeName = f.name.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    const safeUrl  = f.url.replace(/'/g,"\\'");
+    return `
+    <div class="dl-file-row" id="dlrow-${f.id}"
+      onclick="viewFileContent(${f.id},'${safeName}','${esc(f.type)}','${safeUrl}')"
+      style="display:flex;align-items:center;gap:12px;padding:10px 14px;
+             background:${isSelected ? 'rgba(var(--accent-rgb),.08)':'var(--surface2)'};
+             border:1px solid ${isSelected ? 'var(--accent)':'var(--border)'};
+             border-radius:9px;cursor:pointer;">
+      <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleDlSelect(${f.id},this.checked)" style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0;cursor:pointer"/>
+      <div style="width:36px;height:36px;border-radius:8px;flex-shrink:0;background:${typeBg[f.type]||'rgba(var(--accent-rgb),.12)'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${typeColors[f.type]||'var(--accent-muted)'};border:1px solid ${typeColors[f.type]||'var(--accent)'}33;">${f.type.toUpperCase()}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(f.name)}.${esc(f.type)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px;display:flex;gap:12px;align-items:center;">
+          <span>💾 ${f.size}</span><span>📂 ${f.source}</span><span>🕐 ${timeAgo(f.time_ms)}</span>
+          <span style="font-size:10px;color:var(--accent-muted);border:1px solid rgba(var(--accent-rgb),.25);background:rgba(var(--accent-rgb),.07);border-radius:4px;padding:1px 6px;">click to preview</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <a href="${esc(f.url)}" download="${esc(f.name)}.${esc(f.type)}" onclick="event.stopPropagation()" class="icon-btn" style="font-size:11px;padding:4px 10px;text-decoration:none;">⬇ Download</a>
+        <button class="icon-btn" onclick="event.stopPropagation();deleteSingleFile(${f.id})" style="font-size:11px;padding:4px 8px;background:rgba(239,68,68,.08);color:#fca5a5;border-color:rgba(239,68,68,.2);">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+  const start = (data.page - 1) * data.limit + 1, end = Math.min(data.page * data.limit, data.total);
+  document.getElementById('dlPageInfo').textContent = data.total ? `${start}–${end} of ${data.total} files` : 'No files';
+  document.getElementById('dlPrevBtn').disabled = data.page <= 1;
+  document.getElementById('dlNextBtn').disabled = data.page >= data.total_pages;
+  updateZipBtn();
+}
+
+function dlChangePage(delta) { const p = dlState.page + delta; if (p < 1 || p > dlState.totalPages) return; dlState.page = p; fetchDownloads(); }
+function toggleDlSelect(id, checked) {
+  if (checked) dlSelected.add(id); else dlSelected.delete(id);
+  const row = document.getElementById('dlrow-' + id);
+  if (row) { row.style.borderColor = checked ? 'var(--accent)' : 'var(--border)'; row.style.background = checked ? 'rgba(var(--accent-rgb),.08)' : 'var(--surface2)'; }
+  updateZipBtn();
+}
+function selectAllDl() {
+  document.querySelectorAll('#dlGrid input[type=checkbox]').forEach(cb => {
+    cb.checked = true;
+    const row = cb.closest('[id^=dlrow-]');
+    const id  = parseInt(row.id.replace('dlrow-',''));
+    dlSelected.add(id); row.style.borderColor = 'var(--accent)'; row.style.background = 'rgba(var(--accent-rgb),.08)';
+  });
+  updateZipBtn();
+}
+function updateZipBtn() { document.getElementById('dlZipBtn').disabled = dlSelected.size === 0; }
+function downloadSelected() { if (!dlSelected.size) return; window.location.href = `${DL_ZIP_URL}?ids=${Array.from(dlSelected).join(',')}`; }
+
+async function deleteSingleFile(id) {
+  if (!confirm('Delete this file?')) return;
+  try {
+    const res = await fetch(`/downloads/${id}/delete/`, { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    dlSelected.delete(id); toast('File deleted', 'ok'); fetchDownloads(); loadDlStats();
+  } catch(e) { toast('Delete failed: ' + e.message, 'err'); }
+}
+async function deleteAllFiles() {
+  if (!confirm('Delete ALL stored files?')) return;
+  try {
+    const res  = await fetch('/downloads/delete-all/', { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN } });
+    const data = await res.json(); dlSelected.clear(); toast(`Deleted ${data.deleted} file(s)`, 'ok'); fetchDownloads(); loadDlStats();
+  } catch(e) { toast('Delete failed: ' + e.message, 'err'); }
+}
+async function loadDlStats() {
+  try {
+    const res = await fetch(DL_STATS); const data = await res.json();
+    if (document.getElementById('sbDlCount')) document.getElementById('sbDlCount').textContent = data.total || '0';
+  } catch(e) {}
+}
+
+/* ════ FILE PREVIEW ════ */
+let _previewWrapEnabled = false;
+async function viewFileContent(id, name, type, url) {
+  _previewWrapEnabled = false;
+  const loadEl  = document.getElementById('previewLoadingState');
+  const codeEl  = document.getElementById('previewCodeArea');
+  const errEl   = document.getElementById('previewErrorState');
+  const errMsg  = document.getElementById('previewErrorMsg');
+  const errDl   = document.getElementById('previewErrorDl');
+  const wrapBtn = document.getElementById('previewWrapBtn');
+  loadEl.style.display = 'block'; codeEl.style.display = 'none'; errEl.style.display = 'none';
+  codeEl.value = ''; codeEl.style.whiteSpace = 'pre';
+  wrapBtn.style.color = 'var(--muted)'; wrapBtn.style.borderColor = 'var(--border)';
+  document.getElementById('previewLineCount').textContent = '';
+  document.getElementById('previewByteCount').textContent = '';
+  document.getElementById('previewCharCount').textContent = '';
+  document.getElementById('previewTitle').textContent = name + '.' + type;
+  const badge = document.getElementById('previewTypeBadge');
+  badge.textContent = type.toUpperCase();
+  const badgeMap = { ktr:'tdb-ktr', kjb:'tdb-kjb', sql:'tdb-sql', zip:'tdb-zip', txt:'tdb-ok' };
+  badge.className = 'td-badge ' + (badgeMap[type] || 'tdb-ok');
+  const dlLink = document.getElementById('previewDownloadLink');
+  dlLink.href = url; dlLink.download = name + '.' + type;
+  document.getElementById('previewMeta').innerHTML = '<span class="skeleton" style="width:200px;height:11px;border-radius:3px;">&nbsp;</span>';
+  openModal('filePreviewModal');
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (type === 'zip') {
+      loadEl.style.display = 'none'; errEl.style.display = 'block';
+      errMsg.textContent = 'ZIP files are binary and cannot be previewed.';
+      errDl.href = url; errDl.download = name + '.zip'; errDl.textContent = '⬇ Download ZIP instead';
+      document.getElementById('previewMeta').innerHTML = '<span>📦 Binary file — download to open</span>';
+      return;
+    }
+    const text = await res.text();
+    const lines = text.split('\n').length, chars = text.length, bytes = new Blob([text]).size;
+    const fmtBytes = bytes > 1048576 ? (bytes/1048576).toFixed(2)+' MB' : bytes > 1024 ? (bytes/1024).toFixed(1)+' KB' : bytes+' B';
+    document.getElementById('previewMeta').innerHTML =
+      `<span>📄 ${lines.toLocaleString()} lines</span><span>💾 ${fmtBytes}</span><span>🔤 ${chars.toLocaleString()} chars</span><span>🏷 ${type.toUpperCase()}</span><span>📁 ${esc(name)}</span>`;
+    document.getElementById('previewLineCount').textContent = lines.toLocaleString() + ' lines';
+    document.getElementById('previewByteCount').textContent = fmtBytes;
+    document.getElementById('previewCharCount').textContent = chars.toLocaleString() + ' chars';
+    codeEl.value = text; loadEl.style.display = 'none'; codeEl.style.display = 'block'; codeEl.scrollTop = 0;
+  } catch (err) {
+    loadEl.style.display = 'none'; errEl.style.display = 'block';
+    errMsg.textContent = err.message; errDl.href = url; errDl.download = name + '.' + type;
+    errDl.textContent = '⬇ Try downloading directly instead';
+    document.getElementById('previewMeta').innerHTML = '<span style="color:var(--error)">✗ Failed to load</span>';
+  }
+}
+
+function copyPreviewContent() {
+  const area = document.getElementById('previewCodeArea');
+  if (!area.value) { toast('Nothing to copy', 'err'); return; }
+  navigator.clipboard.writeText(area.value).then(() => {
+    toast('Content copied ✓', 'ok');
+    const btn = document.getElementById('previewCopyBtn');
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = '📋 Copy', 1800);
+  }).catch(() => toast('Copy failed', 'err'));
+}
+
+function togglePreviewWrap() {
+  _previewWrapEnabled = !_previewWrapEnabled;
+  const area = document.getElementById('previewCodeArea'), btn = document.getElementById('previewWrapBtn');
+  area.style.whiteSpace = _previewWrapEnabled ? 'pre-wrap' : 'pre';
+  btn.style.color       = _previewWrapEnabled ? 'var(--accent-muted)' : 'var(--muted)';
+  btn.style.borderColor = _previewWrapEnabled ? 'var(--accent)' : 'var(--border)';
+  btn.textContent       = _previewWrapEnabled ? '↩ Wrap ✓' : '↩ Wrap';
+}
+
+/* ════ DOCS ════ */
+function openDocs(section) {
+  document.getElementById('docsModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  switchDoc(section || 'overview');
+  document.getElementById('docsSearchInp').value = '';
+  docsSearch('');
+}
+function closeDocs() {
+  document.getElementById('docsModal').classList.remove('open');
+  if (!document.querySelector('.modal-overlay.open')) document.body.style.overflow = '';
+}
+function docsOverlayClose(e) { if (e.target === document.getElementById('docsModal')) closeDocs(); }
+function switchDoc(id) {
+  document.querySelectorAll('.docs-sec').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.docs-nav-item').forEach(n => n.classList.remove('active'));
+  const sec = document.getElementById('dc-' + id), nav = document.getElementById('dn-' + id);
+  if (sec) sec.classList.add('active');
+  if (nav) nav.classList.add('active');
+  document.getElementById('docsContent').scrollTop = 0;
+}
+function docsSearch(q) {
+  q = q.toLowerCase().trim();
+  document.querySelectorAll('.docs-nav-item').forEach(el => {
+    el.style.display = (!q || el.textContent.toLowerCase().includes(q)) ? '' : 'none';
+  });
+}
+function dCopy(btn) {
+  const pre = btn.parentElement.cloneNode(true);
+  pre.querySelector('.d-copy').remove();
+  navigator.clipboard.writeText(pre.innerText.trim())
+    .then(() => { btn.textContent = '✓ Copied'; setTimeout(() => btn.textContent = '📋 Copy', 1800); })
+    .catch(() => {});
+}
+function downloadDocumentation() {
+  const btn = document.getElementById('docsDlBtn');
+  if (btn) { btn.classList.add('loading'); btn.textContent = '⏳ Preparing…'; }
+  const url = '/static/transformer/docs/pentaho_ai_documentation.docx';
+  fetch(url).then(res => { if (!res.ok) throw new Error('File not available'); return res.blob(); })
+    .then(blob => {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'Pentaho_AI_Documentation.docx'; a.click(); URL.revokeObjectURL(a.href);
+      if (btn) { btn.classList.remove('loading'); btn.textContent = '✅ Downloaded!'; setTimeout(() => btn.textContent = '📄 Download .docx', 2000); }
+    })
+    .catch(() => {
+      if (btn) { btn.classList.remove('loading'); btn.textContent = '📄 Download .docx'; }
+      toast('Place .docx at /static/docs/ to enable download', 'err');
+    });
+}
+
+/* ════ KEYBOARD SHORTCUTS ════ */
+document.addEventListener('keydown', e => {
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if (e.key === '?') openDocs('overview');
+  if (e.key === 'Escape') {
+    if (document.getElementById('filePreviewModal').classList.contains('open')) { closeModal('filePreviewModal'); return; }
+    if (document.getElementById('docsModal').classList.contains('open'))        { closeDocs(); return; }
+    document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
+  }
+  /* Platform hotkeys */
+  if (e.key === '1' && e.ctrlKey) { e.preventDefault(); switchPlatform('pentaho'); }
+  if (e.key === '2' && e.ctrlKey) { e.preventDefault(); switchPlatform('talend'); }
+});
+
+/* ════ HELPERS ════ */
+function fmtNum(n) { n = n || 0; if (n >= 1000000) return (n/1000000).toFixed(1)+"M"; if (n >= 1000) return (n/1000).toFixed(1)+"K"; return n.toString(); }
+function timeAgo(ms) { const s = Math.floor((Date.now()-ms)/1000); if(s<60)return s+"s ago"; if(s<3600)return Math.floor(s/60)+"m ago"; if(s<86400)return Math.floor(s/3600)+"h ago"; return Math.floor(s/86400)+"d ago"; }
+function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function getCookie(name) {
+  let v = null;
+  if (document.cookie && document.cookie !== "") {
+    document.cookie.split(";").forEach(c => { c = c.trim(); if (c.startsWith(name + "=")) v = decodeURIComponent(c.substring(name.length + 1)); });
+  }
+  return v;
+}
+
+/* ════ INIT ════ */
+document.getElementById("dashDate").textContent = new Date().toLocaleDateString("en-GB",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+loadPreferences();
+loadApiSettings();
+switchPlatform(curPlat);  /* sets theme + loads stats */
+loadDlStats();
+</script>
+</body>
+</html>

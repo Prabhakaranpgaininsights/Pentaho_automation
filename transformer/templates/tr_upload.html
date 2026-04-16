@@ -1,0 +1,451 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Pentaho Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0f14; --surface: #151820; --surface2: #1c2030; --border: #2a2f3d;
+    --accent: #4f46e5; --success: #22c55e; --error: #ef4444;
+    --text: #e8eaf0; --muted: #6b7280;
+    --sans: 'Inter', sans-serif; --mono: 'Courier New', monospace;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+  /* ── Shell + Sidebar ───────────────────────────────────────────────────── */
+  .shell   { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.5rem 0; flex-shrink: 0; }
+  .main    { flex: 1; overflow-y: auto; padding: 2rem 2rem 3rem; display: flex; justify-content: center; align-items: flex-start; }
+  @media(max-width:800px) { .sidebar { display:none; } .main { padding:1.25rem; } }
+
+  .sb-logo { padding: 0 1.25rem 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+  .sb-logo h2 { font-size: 15px; font-weight: 600; color: var(--accent); }
+  .sb-logo p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .sb-section { padding: 0 .75rem; margin-bottom: .25rem; }
+  .sb-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; padding: .5rem .5rem .25rem; }
+  .sb-link { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; font-size:13px; font-weight:500; color:var(--muted); text-decoration:none; transition:all .15s; cursor:pointer; border:none; background:none; width:100%; font-family:var(--sans); }
+  .sb-link:hover  { background:rgba(79,70,229,.08); color:#a5b4fc; }
+  .sb-link.active { background:rgba(79,70,229,.15); color:#a5b4fc; border-left:2px solid var(--accent); padding-left:8px; }
+  .sb-link .sb-ico { font-size:15px; width:20px; text-align:center; flex-shrink:0; }
+  .sb-footer { margin-top:auto; padding:1rem 1.25rem 0; border-top:1px solid var(--border); }
+  .sb-footer p { font-size:11px; color:var(--muted); line-height:1.6; }
+  .sb-footer strong { color:var(--text); }
+
+  /* ── Content card ──────────────────────────────────────────────────────── */
+  .container { max-width: 540px; width: 100%; background: var(--surface); border-radius: 16px; padding: 2.5rem 2rem; box-shadow: 0 15px 50px rgba(0,0,0,0.5); }
+
+  header { text-align: center; margin-bottom: 2rem; }
+  header h1 { font-size: 22px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  header p  { font-size: 13px; color: var(--muted); }
+
+  /* Mode toggle */
+  .toggle { display: flex; margin-bottom: 1.5rem; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+  .toggle button { flex: 1; padding: 11px 4px; border: none; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; transition: 0.2s; background: var(--surface2); font-family: var(--sans); line-height: 1.4; }
+  .toggle button:not(:last-child) { border-right: 1px solid var(--border); }
+  .toggle button.active { background: var(--accent); color: #fff; }
+  .toggle button .btn-label { display: block; font-size: 11px; color: inherit; opacity: 0.75; margin-top: 2px; }
+
+  /* Steps */
+  .steps { display: flex; margin-bottom: 2rem; gap: 8px; }
+  .step { flex: 1; padding: 10px 0; border-radius: 12px; text-align: center; font-size: 13px; font-weight: 500; background: var(--surface2); color: var(--muted); transition: all .2s; }
+  .step.active { background: var(--accent); color: #fff; }
+  .step.done   { background: var(--success); color: #fff; }
+
+  /* Upload */
+  .upload-box { position: relative; border: 2px dashed var(--border); border-radius: 12px; padding: 2rem 1rem; text-align: center; cursor: pointer; transition: 0.2s; background: var(--surface2); margin-bottom: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .upload-box:hover, .upload-box.dragover { border-color: var(--accent); background: rgba(79,70,229,0.05); }
+  .upload-box input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .upload-icon { font-size: 32px; margin-bottom: 8px; }
+  .upload-box h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .upload-box p  { font-size: 13px; color: var(--muted); }
+
+  /* File info */
+  .file-info { display: none; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px 8px 0 0; padding: 10px 14px; font-size: 13px; border-bottom: none; }
+  .file-info.show { display: flex; }
+  .file-meta { flex: 1; }
+  .file-meta .fname { font-weight: 500; font-size: 13px; }
+  .file-meta .fsize { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .file-actions { display: flex; gap: 6px; align-items: center; }
+  .file-remove { background: none; border: none; color: var(--error); cursor: pointer; font-size: 15px; }
+  .toggle-preview { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 3px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-family: var(--sans); transition: all .15s; }
+  .toggle-preview:hover, .toggle-preview.open { color: var(--accent); border-color: var(--accent); }
+
+  /* Preview panel */
+  .file-preview { display: none; background: #0a0c10; border: 1px solid var(--border); border-radius: 0 0 8px 8px; margin-bottom: 1rem; overflow: hidden; }
+  .file-preview.show { display: block; }
+  .preview-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 7px 14px; border-bottom: 1px solid var(--border); background: var(--surface2); }
+  .preview-toolbar span { font-size: 11px; color: var(--muted); }
+  .preview-toolbar strong { color: var(--success); }
+  .preview-content { padding: 14px; font-family: var(--mono); font-size: 12px; line-height: 1.8; color: #a8b4cc; max-height: 220px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+  .preview-line { display: flex; gap: 14px; }
+  .line-num  { color: #3d4a60; min-width: 24px; text-align: right; user-select: none; flex-shrink: 0; }
+  .line-text { flex: 1; }
+
+  /* Download success */
+  .download-box { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.3); border-radius: 12px; padding: 2rem; text-align: center; margin-bottom: 1rem; }
+  .download-box .dl-icon { font-size: 40px; margin-bottom: 10px; }
+  .download-box h3 { font-size: 17px; font-weight: 600; color: #86efac; margin-bottom: 6px; }
+  .download-box p  { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .files-badge { display: inline-flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+  .badge-file { background: rgba(79,70,229,0.15); border: 1px solid rgba(79,70,229,0.3); color: #a5b4fc; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: 0.2s; margin-bottom: 8px; font-family: var(--sans); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #3b3fd5; }
+  .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+  .btn-ghost { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); font-size: 13px; padding: 10px; }
+  .btn-ghost:hover { background: var(--border); color: var(--text); }
+
+  /* Alert */
+  .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 1rem; display: none; line-height: 1.5; }
+  .alert.show { display: block; }
+  .alert-error { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: #fca5a5; }
+
+  .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.25); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader { display: none; margin-top: 4px; font-size: 12px; color: var(--muted); text-align: center; padding: 6px 0; }
+
+  .sec { display: none; }
+  .sec.show { display: block; }
+  .footer { margin-top: 2rem; font-size: 12px; color: var(--muted); text-align: center; }
+  .docs-nav-new {
+    margin-left: auto;
+    background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.22);
+    color: #86efac; font-size: 9px; font-weight: 700;
+    padding: 1px 5px; border-radius: 10px;
+  }
+
+  .docs-nav-old {
+    margin-left: auto;
+    background: rgba(255, 77, 77, 0.1);      /* light red background */
+    border: 1px solid rgba(255, 77, 77, 0.22); /* red border */
+    color: #ff4d4d;                          /* red text */
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 10px;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── Sidebar ────────────────────────────────────────────────────────── -->
+   {% include 'components/sidebar.html' %}
+  <!-- <aside class="sidebar">
+    <div class="sb-logo">
+      <h2>⚡ Pentaho AI</h2>
+      <p>Gain Insights Platform</p>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Main</div>
+      <a class="sb-link" href="{% url 'dashboard' %}">
+        <span class="sb-ico">📊</span> Dashboard
+      </a>
+      <a class="sb-link" href="{% url 'generate_pentaho' %}">
+        <span class="sb-ico">⚙️</span> File Generator <span class="docs-nav-new">AI New</span>
+      </a>
+      <a class="sb-link" href="{% url 'table_joins' %}"><span class="sb-ico">🔗</span> Table Join Builder</a>
+      <a class="sb-link" href="{% url 'table_builder' %}">
+        <span class="sb-ico">🗄</span> Table Builder
+      </a>
+    </div>
+
+    <div class="sb-section" style="margin-top:.75rem">
+      <div class="sb-label">Generate</div>
+      <a class="sb-link active" href="{% url 'upload_tr' %}">
+        <span class="sb-ico">🔄</span> KTR / KJB <span class="docs-nav-old">Old Version</span>
+      </a>
+      <a class="sb-link" href="{% url 'generate_pentaho' %}">
+        <span class="sb-ico">📦</span> KTR + KJB
+      </a> 
+    </div>
+
+    <div class="sb-section" style="margin-top:.75rem">
+      <div class="sb-label">Config</div>
+      <a class="sb-link" href="#">
+        <span class="sb-ico">🔑</span> API Settings
+      </a>
+      <a class="sb-link" href="#">
+        <span class="sb-ico">⚙️</span> Preferences
+      </a>
+    </div>
+
+    <div class="sb-footer">
+      <p>Mode: <strong id="sbModeLabel">{{model}}</strong></p>
+      <p style="margin-top:4px">Status: <strong style="color:var(--success)">● Ready</strong></p>
+    </div>
+  </aside> -->
+
+  <!-- ── Main ───────────────────────────────────────────────────────────── -->
+  <main class="main">
+    <div class="container">
+      {% csrf_token %}
+
+      <header>
+        <h1 id="pageTitle">⚡ AI Pentaho Generator</h1>
+        <p>Upload your steps file → Claude AI generates Pentaho files automatically</p>
+      </header>
+
+      <!-- Mode Toggle: KTR | KJB -->
+      <div class="toggle">
+        <button id="btnModeKtr" class="active" onclick="setMode('ktr')">
+          🔄 Transformation
+          <span class="btn-label">(.ktr)</span>
+        </button>
+        <button id="btnModeKjb" onclick="setMode('kjb')">
+          ⚙️ Job
+          <span class="btn-label">(.kjb)</span>
+        </button>
+      </div>
+
+      <!-- Steps -->
+      <div class="steps">
+        <div class="step active" id="step1">Upload</div>
+        <div class="step"        id="step2">Processing</div>
+        <div class="step"        id="step3">Done</div>
+      </div>
+
+      <!-- ── SECTION 1: Upload ──────────────────── -->
+      <div id="sec-upload" class="sec show">
+
+        <label class="upload-box" id="uploadBox">
+          <input type="file" id="fileInput" accept=".txt,.md,.text"/>
+          <div class="upload-icon">📂</div>
+          <h3 id="uploadTitle">Click or drop steps file for .ktr</h3>
+          <p id="uploadHint">Supports .txt, .md files</p>
+        </label>
+
+        <div class="file-info" id="fileInfo">
+          <span style="font-size:18px">📄</span>
+          <div class="file-meta">
+            <div class="fname" id="fileName">—</div>
+            <div class="fsize" id="fileSize">—</div>
+          </div>
+          <div class="file-actions">
+            <button class="toggle-preview" id="togglePreview">👁 Preview</button>
+            <button class="file-remove"    id="fileRemove">✕</button>
+          </div>
+        </div>
+
+        <div class="file-preview" id="filePreview">
+          <div class="preview-toolbar">
+            <span>File contents — <strong id="previewLines">0</strong> lines</span>
+            <span>UTF-8</span>
+          </div>
+          <div class="preview-content" id="previewContent"></div>
+        </div>
+
+        <div class="alert alert-error" id="uploadAlert"></div>
+
+        <button class="btn btn-primary" id="btnGenerate" disabled>Generate Transformation (.ktr)</button>
+        <div class="loader" id="loaderGenerate">⏳ Sending to Claude AI...</div>
+
+      </div>
+
+      <!-- ── SECTION 2: Download Result ────────── -->
+      <div id="sec-download" class="sec">
+        <div class="download-box">
+          <div class="dl-icon">✅</div>
+          <h3 id="downloadTitle">File Generated!</h3>
+          <p  id="downloadSubtitle">Your file has been downloaded. Open it in Pentaho Spoon.</p>
+          <div class="files-badge" id="filesBadge"></div>
+        </div>
+        <button class="btn btn-ghost" id="btnReset">🔄 Generate Another</button>
+      </div>
+
+      <div class="footer">Powered by <strong>Gain Insights</strong></div>
+    </div>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const GENERATE_URLS = {
+  ktr: "{% url 'upload_tr' %}",
+  kjb: "{% url 'upload_job' %}",
+};
+
+let currentMode = 'ktr';
+
+function getCsrfToken() {
+  for (let c of document.cookie.split(';')) {
+    c = c.trim();
+    if (c.startsWith('csrftoken=')) return decodeURIComponent(c.substring(10));
+  }
+  return '';
+}
+
+const MODE_CONFIG = {
+  ktr: { title: 'Click or drop steps file for .ktr', btnText: 'Generate Transformation (.ktr)', sbLabel: 'KTR Generator', pageTitle: '🔄 KTR Generator' },
+  kjb: { title: 'Click or drop steps file for .kjb', btnText: 'Generate Job (.kjb)',             sbLabel: 'KJB Generator', pageTitle: '⚙️ KJB Generator' },
+};
+
+function setMode(mode) {
+  currentMode = mode;
+  $('btnModeKtr').classList.toggle('active', mode === 'ktr');
+  $('btnModeKjb').classList.toggle('active', mode === 'kjb');
+  $('uploadTitle').textContent   = MODE_CONFIG[mode].title;
+  $('btnGenerate').textContent   = MODE_CONFIG[mode].btnText;
+  $('sbModeLabel').textContent   = MODE_CONFIG[mode].sbLabel;   // ← update sidebar footer
+  $('pageTitle').textContent     = MODE_CONFIG[mode].pageTitle; // ← update page title
+
+  // Update sidebar active link
+  document.querySelectorAll('.sb-link').forEach(l => l.classList.remove('active'));
+  const activeUrl = mode === 'ktr' ? "{% url 'upload_tr' %}" : "{% url 'upload_job' %}";
+  document.querySelectorAll('.sb-link').forEach(l => {
+    if (l.getAttribute('href') === activeUrl) l.classList.add('active');
+  });
+
+  resetAll();
+}
+
+const box = $('uploadBox');
+let selectedFile = null;
+
+box.addEventListener('dragover',  e => { e.preventDefault(); box.classList.add('dragover'); });
+box.addEventListener('dragleave', ()  => box.classList.remove('dragover'));
+box.addEventListener('drop', e => {
+  e.preventDefault(); box.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+});
+$('fileInput').addEventListener('change', e => { if (e.target.files[0]) setFile(e.target.files[0]); });
+$('fileRemove').addEventListener('click', clearFile);
+
+function setFile(f) {
+  selectedFile = f;
+  $('fileName').textContent = f.name;
+  $('fileSize').textContent = formatBytes(f.size);
+  $('fileInfo').classList.add('show');
+  $('btnGenerate').disabled = false;
+  $('uploadAlert').classList.remove('show');
+  const reader = new FileReader();
+  reader.onload = e => renderPreview(e.target.result);
+  reader.readAsText(f);
+}
+
+function clearFile() {
+  selectedFile = null;
+  $('fileInput').value = '';
+  $('fileInfo').classList.remove('show');
+  $('filePreview').classList.remove('show');
+  $('togglePreview').classList.remove('open');
+  $('togglePreview').textContent = '👁 Preview';
+  $('btnGenerate').disabled = true;
+}
+
+function formatBytes(b) {
+  if (b < 1024)    return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(1) + ' MB';
+}
+
+function renderPreview(text) {
+  const lines = text.split('\n');
+  $('previewLines').textContent = lines.length;
+  const c = $('previewContent'); c.innerHTML = '';
+  lines.forEach((line, i) => {
+    const d = document.createElement('div'); d.className = 'preview-line';
+    d.innerHTML = `<span class="line-num">${i + 1}</span><span class="line-text">${escapeHtml(line) || '&nbsp;'}</span>`;
+    c.appendChild(d);
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+$('togglePreview').addEventListener('click', () => {
+  const open = $('filePreview').classList.toggle('show');
+  $('togglePreview').classList.toggle('open', open);
+  $('togglePreview').textContent = open ? '🙈 Hide' : '👁 Preview';
+});
+
+$('btnGenerate').addEventListener('click', async () => {
+  if (!selectedFile) return;
+  const btn = $('btnGenerate');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating…';
+  $('loaderGenerate').style.display = 'block';
+  $('uploadAlert').classList.remove('show');
+  setStep(1, 'done'); setStep(2, 'active');
+
+  const fd = new FormData();
+  fd.append('steps_file', selectedFile);
+
+  try {
+    const res = await fetch(GENERATE_URLS[currentMode], {
+      method:  'POST',
+      headers: { 'X-CSRFToken': getCsrfToken() },
+      body:    fd,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Generation failed' }));
+      throw new Error(err.error || `Server error ${res.status}`);
+    }
+
+    const blob  = await res.blob();
+    const contentDisposition = res.headers.get('Content-Disposition') || '';
+    const match = contentDisposition.match(/filename="?([^"]+)"?/);
+    const fname = match ? match[1] : (currentMode === 'ktr' ? 'generated_transformation.ktr' : 'generated_job.kjb');
+
+    triggerDownload(blob, fname);
+
+    $('downloadTitle').textContent    = fname + ' generated!';
+    $('downloadSubtitle').textContent = 'Your file has been downloaded. Open it in Pentaho Spoon.';
+    $('filesBadge').innerHTML         = `<span class="badge-file">📄 ${fname}</span>`;
+
+    setStep(2, 'done'); setStep(3, 'active');
+    showSection('download');
+
+  } catch (err) {
+    $('uploadAlert').textContent = '❌ ' + err.message;
+    $('uploadAlert').classList.add('show');
+    setStep(1, 'active'); setStep(2, '');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = MODE_CONFIG[currentMode].btnText;
+    $('loaderGenerate').style.display = 'none';
+  }
+});
+
+function triggerDownload(blob, fname) {
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href = url; a.download = fname; a.click();
+  URL.revokeObjectURL(url);
+}
+
+$('btnReset').addEventListener('click', resetAll);
+
+function resetAll() {
+  clearFile();
+  $('uploadAlert').classList.remove('show');
+  $('filesBadge').innerHTML = '';
+  [1, 2, 3].forEach(i => { $('step' + i).className = 'step'; });
+  $('step1').classList.add('active');
+  showSection('upload');
+}
+
+function showSection(name) {
+  ['upload', 'download'].forEach(n =>
+    $('sec-' + n).classList.toggle('show', n === name)
+  );
+}
+
+function setStep(n, state) {
+  const el = $('step' + n);
+  el.classList.remove('active', 'done');
+  if (state) el.classList.add(state);
+}
+</script>
+</body>
+</html>

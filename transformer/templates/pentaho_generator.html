@@ -1,0 +1,790 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pentaho File Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d0f14; --surface: #151820; --surface2: #1c2030; --border: #2a2f3d;
+  --accent: #4f46e5; --success: #22c55e; --error: #ef4444;
+  --text: #e8eaf0; --muted: #6b7280;
+  --sans: 'Inter', sans-serif; --mono: 'Courier New', monospace;
+}
+body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+/* ── Shell + Sidebar (same as dashboard) ─────────────────────────────────── */
+.shell   { display: flex; min-height: 100vh; }
+.sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.5rem 0; flex-shrink: 0; }
+.main    { flex: 1; overflow-y: auto; padding: 2rem 2rem 3rem; }
+@media(max-width:800px) { .sidebar { display:none; } .main { padding:1.25rem; } }
+
+.sb-logo { padding: 0 1.25rem 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+.sb-logo h2 { font-size: 15px; font-weight: 600; color: var(--accent); }
+.sb-logo p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.sb-section { padding: 0 .75rem; margin-bottom: .25rem; }
+.sb-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; padding: .5rem .5rem .25rem; }
+.sb-link { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; font-size:13px; font-weight:500; color:var(--muted); text-decoration:none; transition:all .15s; cursor:pointer; border:none; background:none; width:100%; font-family:var(--sans); }
+.sb-link:hover  { background:rgba(79,70,229,.08); color:#a5b4fc; }
+.sb-link.active { background:rgba(79,70,229,.15); color:#a5b4fc; border-left:2px solid var(--accent); padding-left:8px; }
+.sb-link .sb-ico { font-size:15px; width:20px; text-align:center; flex-shrink:0; }
+.sb-link .sb-badge { margin-left:auto; background:var(--accent); color:#fff; font-size:10px; font-weight:600; padding:1px 7px; border-radius:20px; }
+.sb-footer { margin-top:auto; padding:1rem 1.25rem 0; border-top:1px solid var(--border); }
+.sb-footer p { font-size:11px; color:var(--muted); line-height:1.6; }
+.sb-footer strong { color:var(--text); }
+
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
+.topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.75rem; }
+.topbar-left h1 { font-size:20px; font-weight:600; color:var(--text); }
+.topbar-left p  { font-size:13px; color:var(--muted); margin-top:2px; }
+.topbar-right   { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.tb-btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--muted); font-size:13px; font-weight:500; cursor:pointer; transition:all .15s; text-decoration:none; font-family:var(--sans); }
+.tb-btn:hover { border-color:var(--accent); color:#a5b4fc; }
+.tb-btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+.tb-btn.primary:hover { background:#3b3fd5; }
+
+/* ── Content ─────────────────────────────────────────────────────────────── */
+.subtitle { font-size:13px; color:var(--muted); margin-bottom:1.5rem; }
+.subtitle code { color:#a5b4fc; background:rgba(79,70,229,0.15); padding:1px 5px; border-radius:4px; }
+
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
+.grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:1rem; }
+@media(max-width:760px) { .grid2 { grid-template-columns:1fr; } }
+.full { grid-column:1 / -1; }
+
+.card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.2rem 1.3rem; }
+.card-title { font-size:13px; font-weight:600; color:var(--text); margin-bottom:.85rem; display:flex; align-items:center; gap:8px; }
+
+.metric { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:.7rem 1rem; }
+.metric-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px; }
+.metric-value { font-size:24px; font-weight:600; color:var(--text); }
+.metric-value.ktr { color:#818cf8; }
+.metric-value.kjb { color:#34d399; }
+
+.drop-zone { border:2px dashed var(--border); border-radius:10px; padding:2rem 1rem; text-align:center; cursor:pointer; transition:all .15s; background:var(--surface2); }
+.drop-zone:hover, .drop-zone.drag { border-color:var(--accent); background:rgba(79,70,229,.07); }
+.drop-zone.has-file { border-color:var(--success); background:rgba(34,197,94,.05); }
+.drop-icon { font-size:28px; margin-bottom:8px; }
+.drop-label { font-size:14px; color:var(--text); font-weight:500; }
+.drop-hint { font-size:12px; color:var(--muted); margin-top:4px; }
+.drop-filename { font-size:13px; color:var(--success); font-weight:500; margin-top:6px; font-family:var(--mono); }
+#fileInput { display:none; }
+
+textarea { width:100%; border:1px solid var(--border); border-radius:8px; padding:.75rem; font-size:12.5px; font-family:var(--mono); resize:vertical; outline:none; background:var(--surface2); color:var(--text); line-height:1.6; }
+textarea:focus { border-color:var(--accent); }
+textarea::placeholder { color:var(--muted); }
+.step-area { height:260px; }
+.xml-area  { height:310px; }
+
+.tabs { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:.75rem; }
+.tab { padding:5px 12px; border-radius:20px; font-size:12px; font-weight:500; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--muted); transition:all .12s; white-space:nowrap; font-family:var(--sans); }
+.tab:hover { border-color:var(--accent); color:#a5b4fc; }
+.tab.active.ktr { background:var(--accent); color:#fff; border-color:var(--accent); }
+.tab.active.kjb { background:#16a34a; color:#fff; border-color:#16a34a; }
+
+.file-list { display:flex; flex-direction:column; gap:6px; }
+.file-row { display:flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface2); cursor:pointer; transition:background .1s; }
+.file-row:hover { background:rgba(79,70,229,.08); }
+.file-row.active { border-color:var(--accent); background:rgba(79,70,229,.12); }
+.badge { padding:2px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+.badge.ktr { background:rgba(79,70,229,.2); color:#a5b4fc; }
+.badge.kjb { background:rgba(34,197,94,.15); color:#86efac; }
+.file-row-name { font-family:var(--mono); font-size:12px; color:var(--text); flex:1; }
+.file-row-lines { font-size:11px; color:var(--muted); }
+
+.btn { display:inline-flex; align-items:center; gap:6px; padding:.55rem 1.1rem; border-radius:8px; border:1px solid transparent; font-size:13px; font-weight:500; cursor:pointer; transition:all .12s; white-space:nowrap; font-family:var(--sans); }
+.btn-primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+.btn-primary:hover { background:#3b3fd5; }
+.btn-primary:disabled { background:var(--border); color:var(--muted); cursor:not-allowed; }
+.btn-outline { background:var(--surface2); color:var(--muted); border-color:var(--border); }
+.btn-outline:hover { background:var(--border); color:var(--text); }
+.btn-outline:disabled { opacity:.45; cursor:not-allowed; }
+.btn-green { background:#16a34a; color:#fff; border-color:#16a34a; }
+.btn-green:hover { background:#15803d; }
+.btn-green:disabled { opacity:.45; cursor:not-allowed; }
+.btns { display:flex; gap:8px; flex-wrap:wrap; margin-top:1rem; align-items:center; }
+
+.status { margin-top:.85rem; padding:.6rem .9rem; border-radius:8px; font-size:13px; display:flex; align-items:center; gap:8px; line-height:1.4; }
+.s-idle { background:var(--surface2); color:var(--muted); border:1px solid var(--border); }
+.s-load { background:rgba(79,70,229,.1); color:#a5b4fc; border:1px solid rgba(79,70,229,.3); }
+.s-ok   { background:rgba(34,197,94,.08); color:#86efac; border:1px solid rgba(34,197,94,.3); }
+.s-err  { background:rgba(239,68,68,.1); color:#fca5a5; border:1px solid rgba(239,68,68,.3); }
+.s-warn { background:rgba(234,179,8,.08); color:#fde68a; border:1px solid rgba(234,179,8,.3); }
+
+.spinner { width:14px; height:14px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin .6s linear infinite; flex-shrink:0; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.seg { display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.seg-btn { padding:5px 14px; font-size:12px; font-weight:500; cursor:pointer; background:var(--surface2); color:var(--muted); border:none; transition:all .12s; font-family:var(--sans); }
+.seg-btn.on { background:var(--accent); color:#fff; }
+.toggle-row { display:flex; align-items:center; gap:10px; margin-bottom:1rem; }
+.toggle-label { font-size:13px; color:var(--muted); }
+.ex-link { font-size:12px; color:#818cf8; cursor:pointer; text-decoration:underline; background:none; border:none; margin-left:auto; font-family:var(--sans); }
+
+.progress-wrap { height:3px; background:var(--border); border-radius:2px; margin-top:8px; overflow:hidden; }
+.progress-bar  { height:100%; background:var(--accent); border-radius:2px; transition:width .3s; width:0%; }
+
+.debug-box { margin-top:8px; font-size:11px; font-family:var(--mono); color:var(--muted); background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:6px 8px; max-height:80px; overflow:auto; display:none; }
+.footer { margin-top:2rem; font-size:12px; color:var(--muted); text-align:center; }
+.sb-logo{padding:0 1.25rem 1.5rem;border-bottom:1px solid var(--border);margin-bottom:1rem;display:flex;align-items:center;gap:10px}
+.sb-logo-fb{width:36px;height:36px;border-radius:8px;background:rgba(79,70,229,.2);border:1px solid rgba(79,70,229,.4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.sb-logo-t h2{font-size:15px;font-weight:600;color:var(--accent)}
+.sb-logo-t p{font-size:11px;color:var(--muted);margin-top:2px}
+
+.docs-nav-new {
+  margin-left: auto;
+  background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.22);
+  color: #86efac; font-size: 9px; font-weight: 700;
+  padding: 1px 5px; border-radius: 10px;
+}
+
+.docs-nav-old {
+  margin-left: auto;
+  background: rgba(255, 77, 77, 0.1);      /* light red background */
+  border: 1px solid rgba(255, 77, 77, 0.22); /* red border */
+  color: #ff4d4d;                          /* red text */
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+}
+.toast { position:fixed; bottom:1.5rem; right:1.5rem; background:var(--surface); border:1px solid var(--border); color:var(--text); font-size:13px; padding:10px 16px; border-radius:8px; z-index:9999; opacity:0; transform:translateY(8px); transition:all .25s; pointer-events:none; }
+.toast.show { opacity:1; transform:translateY(0); }
+.toast.ok  { border-color:rgba(34,197,94,.4);  color:#86efac; }
+.toast.err { border-color:rgba(239,68,68,.4);  color:#fca5a5; }
+
+@keyframes micPulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.4; transform:scale(1.3); }
+}
+#micBtn.active {
+  background:rgba(239,68,68,.12);
+  border-color:rgba(239,68,68,.4);
+  color:#fca5a5;
+}
+#micBtn.active:hover {
+  background:rgba(239,68,68,.22);
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── Sidebar (identical to dashboard) ──────────────────────────────── -->
+   {% include 'components/sidebar.html' %}
+  <!-- <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-fb">⚡</div>
+      <div class="sb-logo-t"><h2>Pentaho AI</h2><p>Gain Insights Platform</p></div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Main</div>
+      <a class="sb-link" href="{% url 'dashboard' %}">
+        <span class="sb-ico">📊</span> Dashboard
+      </a>
+      <a class="sb-link active" href="{% url 'generate_pentaho' %}">
+        <span class="sb-ico">⚙️</span> File Generator <span class="docs-nav-new">AI New</span>
+      </a>
+      <a class="sb-link" href="{% url 'table_joins' %}"><span class="sb-ico">🔗</span> Table Join Builder</a>
+      <a class="sb-link" href="{% url 'table_builder' %}">
+        <span class="sb-ico">🗄</span> Table Builder
+      </a>
+    </div>
+
+    <div class="sb-section" style="margin-top:.75rem">
+      <div class="sb-label">Generate</div>
+      <a class="sb-link" href="{% url 'upload_tr' %}">
+        <span class="sb-ico">🔄</span> KTR / KJB <span class="docs-nav-old">Old Version</span>
+      </a>
+      <a class="sb-link" href="{% url 'generate_pentaho' %}">
+        <span class="sb-ico">📦</span> KTR + KJB
+      </a>
+    </div>
+
+    <div class="sb-section" style="margin-top:.75rem">
+      <div class="sb-label">Config</div>
+      <a class="sb-link" href="#">
+        <span class="sb-ico">🔑</span> API Settings
+      </a>
+      <a class="sb-link" href="#">
+        <span class="sb-ico">⚙️</span> Preferences
+      </a>
+    </div>
+
+    <div class="sb-footer">
+      <p>Mode: <strong>{{model}}</strong></p>
+      <p style="margin-top:4px">Status: <strong style="color:var(--success)">● Ready</strong></p>
+    </div>
+  </aside> -->
+
+  <!-- ── Main ───────────────────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>⚙️ Pentaho File Generator</h1>
+        <p>Generate .ktr &amp; .kjb XML files from step instructions</p>
+      </div>
+      <!-- <div class="topbar-right">
+        <a class="tb-btn" href="{% url 'dashboard' %}">📊 Dashboard</a>
+        <a class="tb-btn" href="{% url 'upload_tr' %}">🔄 KTR Only</a>
+        <a class="tb-btn" href="{% url 'upload_job' %}">💼 KJB Only</a>
+        <a class="tb-btn" href="{% url 'table_builder' %}">🗄 Table Builder</a>
+      </div> -->
+    </div>
+
+    <p class="subtitle">Upload a step-file or paste instructions — Claude generates valid <code>.ktr</code> &amp; <code>.kjb</code> XML files importable directly into Pentaho Spoon.</p>
+
+    <div class="toggle-row">
+  <span class="toggle-label">Input mode:</span>
+  <div class="seg">
+    <button class="seg-btn on" id="modeFile"  onclick="setMode('file')">Upload File</button>
+    <button class="seg-btn"    id="modePaste" onclick="setMode('paste')">Paste Text</button>
+  </div>
+
+  <!-- 🎙 MIC BUTTON — only shows in paste mode -->
+  <button id="micBtn" onclick="toggleMic()"
+    style="display:none;margin-left:auto;align-items:center;gap:7px;
+           padding:6px 14px;border-radius:8px;border:1px solid var(--border);
+           background:var(--surface2);color:var(--muted);font-size:13px;
+           font-weight:500;cursor:pointer;transition:all .2s;font-family:var(--sans);">
+    🎙 Start Mic
+  </button>
+</div>
+
+<!-- mic status strip -->
+<div id="micStatus" style="display:none;align-items:center;gap:8px;
+     padding:7px 12px;border-radius:8px;margin-bottom:.75rem;font-size:12px;
+     background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#fca5a5;">
+  <span id="micDot" style="width:8px;height:8px;border-radius:50%;
+        background:#ef4444;animation:micPulse 1s ease-in-out infinite;flex-shrink:0"></span>
+  <span id="micStatusText">Listening…</span>
+  <span id="micInterim" style="color:var(--muted);font-style:italic;margin-left:4px"></span>
+</div>
+
+
+    <div class="grid2">
+
+      <!-- LEFT: Input -->
+      <div class="card">
+        <div class="card-title">
+          📋 Step Instructions
+          <button class="ex-link" onclick="loadExample()">Load example</button>
+        </div>
+
+        <div id="dropZone" class="drop-zone"
+             onclick="document.getElementById('fileInput').click()"
+             ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event)">
+          <div class="drop-icon">📂</div>
+          <div class="drop-label">Click to browse or drag &amp; drop</div>
+          <div class="drop-hint">Accepts .txt, .md, or any UTF-8 text file</div>
+          <div class="drop-filename" id="dropName"></div>
+        </div>
+        <input type="file" id="fileInput" accept=".txt,.md,.text" onchange="onFileSelect(event)" />
+
+        <textarea id="pasteArea" class="step-area" style="display:none"
+          placeholder="Paste your step instructions here.
+
+--- TRANSFORMATION: load_customers ---
+Steps:
+1. TableInput — SELECT id, name FROM raw.customers
+2. FilterRows — status = ACTIVE
+3. SelectValues — id→customer_id, name→full_name
+4. TableOutput — dw.dim_customer
+
+--- JOB: daily_etl ---
+Entries:
+1. START
+2. Run transformation: load_customers.ktr
+3. END"></textarea>
+
+        <div class="btns">
+          <button class="btn btn-primary" id="genBtn" onclick="generate()">⚡ Generate Files</button>
+          <button class="btn btn-outline" onclick="clearAll()">Clear</button>
+        </div>
+        <div id="statusBar" class="status s-idle">Ready — upload a file or paste instructions.</div>
+        <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+        <div class="debug-box" id="debugBox"></div>
+      </div>
+
+      <!-- RIGHT: Summary + file list -->
+      <div class="card">
+        <div class="card-title">📊 Summary</div>
+        <div class="grid3">
+          <div class="metric"><div class="metric-label">Transformations</div><div class="metric-value ktr" id="ktrCount">0</div></div>
+          <div class="metric"><div class="metric-label">Jobs</div><div class="metric-value kjb" id="kjbCount">0</div></div>
+          <div class="metric"><div class="metric-label">Total Files</div><div class="metric-value" id="totalCount">0</div></div>
+        </div>
+
+        <div class="card-title" style="margin-top:1rem">📁 Generated Files</div>
+        <div id="fileList" class="file-list">
+          <div style="font-size:13px;color:var(--muted);padding:4px 0">No files generated yet.</div>
+        </div>
+
+        <div class="btns">
+          <button class="btn btn-green"   id="dlAllBtn" onclick="downloadAll()"     disabled>⬇ Download All (.zip)</button>
+          <button class="btn btn-outline" id="dlOneBtn" onclick="downloadCurrent()" disabled>Download Selected</button>
+          <button class="btn btn-outline"               onclick="copyXml()">Copy XML</button>
+        </div>
+      </div>
+
+      <!-- BOTTOM: XML preview -->
+      <div class="card full">
+        <div class="card-title">📄 XML Preview</div>
+        <div id="xmlTabs" class="tabs"></div>
+        <textarea id="xmlArea" class="xml-area" readonly placeholder="Select a file above to preview its XML…"></textarea>
+      </div>
+
+    </div>
+    <div class="footer">Powered by <strong>Gain Insights</strong></div>
+    <!-- ── Toast ── -->
+    <div class="toast" id="toast"></div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+
+function toast(msg, type = "ok") {
+    // Check if toast notifications are enabled
+    const showToast = localStorage.getItem('pref_toast');
+    if (showToast === 'false') return; // do nothing if disabled
+
+    // Get the toast element
+    const el = document.getElementById("toast");
+    if (!el) return; // exit if element not found
+
+    // Set message and style
+    el.textContent = msg;
+    el.className = "toast show " + type;
+
+    // Clear previous timeout if any
+    if (el._t) clearTimeout(el._t);
+
+    // Hide toast after 2.8 seconds
+    el._t = setTimeout(() => {
+        el.classList.remove("show");
+    }, 2800);
+}
+
+
+/* ── All JS unchanged from working version ───────────────────────────────── */
+const REF_KTR = `<?xml version="1.0" encoding="UTF-8"?>
+<transformation>
+  <info><name>TRANSFORMATION_NAME</name><trans_type>Normal</trans_type></info>
+  <order>
+    <hop><from>STEP_A</from><to>STEP_B</to><enabled>Y</enabled></hop>
+  </order>
+  <step>
+    <name>STEP_A</name><type>CsvInput</type><distribute>N</distribute><copies>1</copies>
+    <partitioning><method>none</method><schema_name/></partitioning>
+    <filename>input.csv</filename><separator>,</separator><enclosure>"</enclosure>
+    <header>Y</header><parallel>N</parallel><format>mixed</format><fields/>
+    <GUI><xloc>100</xloc><yloc>100</yloc><draw>Y</draw></GUI>
+  </step>
+  <step>
+    <name>STEP_B</name><type>TableOutput</type><distribute>Y</distribute><copies>1</copies>
+    <partitioning><method>none</method><schema_name/></partitioning>
+    <connection>db_conn</connection><table>output_table</table><commit>100</commit>
+    <GUI><xloc>300</xloc><yloc>100</yloc><draw>Y</draw></GUI>
+  </step>
+  <slave_transformation>N</slave_transformation>
+</transformation>`;
+
+const REF_KJB = `<?xml version="1.0" encoding="UTF-8"?>
+<job>
+  <name>JOB_NAME</name>
+  <entries>
+    <entry>
+      <name>START</name><type>SPECIAL</type><start>Y</start>
+      <GUI><xloc>100</xloc><yloc>100</yloc><draw>Y</draw></GUI>
+    </entry>
+    <entry>
+      <name>Run Transformation</name><type>TRANS</type>
+      <filename>path/to/transformation.ktr</filename>
+      <GUI><xloc>300</xloc><yloc>100</yloc><draw>Y</draw></GUI>
+    </entry>
+  </entries>
+  <hops>
+    <hop>
+      <from>START</from><to>Run Transformation</to>
+      <enabled>Y</enabled><unconditional>Y</unconditional>
+    </hop>
+  </hops>
+</job>`;
+
+const SYSTEM_PROMPT = `You are a Pentaho PDI (Kettle) expert.
+Read the user instructions and generate multiple Pentaho transformation (.ktr) and job (.kjb) XML files.
+OUTPUT FORMAT — use these exact delimiters, nothing else:
+##KTR:filename_without_extension##
+<?xml version="1.0" encoding="UTF-8"?>
+<transformation>
+  ...full valid ktr xml...
+</transformation>
+##END##
+##KJB:filename_without_extension##
+<?xml version="1.0" encoding="UTF-8"?>
+<job>
+  ...full valid kjb xml...
+</job>
+##END##
+RULES:
+1. Use ONLY the delimiter format above — no JSON, no markdown, no explanation.
+2. Each file starts with ##KTR:name## or ##KJB:name## and ends with ##END##
+3. The XML inside must be complete and valid.
+4. Every <step> must have: <name>, <type>, <distribute>, <copies>, <partitioning>, <GUI>
+5. Every <hop>  must have: <from>, <to>, <enabled>
+6. Every job <entry> must have: <name>, <type>, <GUI>
+7. GUI xloc increments by 200 per step.
+8. Correct Pentaho type names:
+   CSV Input -> CsvInput  Table Input -> TableInput  Table Output -> TableOutput
+   Sort Rows -> SortRows  String Ops -> StringOperations  Group By -> GroupBy
+   JavaScript -> ScriptValueMod  Select Values -> SelectValues
+   Filter Rows -> FilterRows  Excel Writer -> TypeExitExcelWriterStep
+   Job Start -> SPECIAL  Run Trans -> TRANS  SQL -> SQL
+REFERENCE KTR: ${REF_KTR}
+REFERENCE KJB: ${REF_KJB}`;
+
+const EXAMPLE = `--- TRANSFORMATION: load_customers ---
+Steps:
+1. TableInput — Read from "raw.customers": SELECT id, name, email, status, created_at FROM raw.customers WHERE status = 'ACTIVE'
+2. FilterRows — Keep rows where email IS NOT NULL
+3. SelectValues — Rename: id->customer_id, name->full_name, email->email_address
+4. StringOperations — Trim whitespace from full_name
+5. TableOutput — Insert into "dw.dim_customer", truncate before load, commit every 100 rows
+
+--- TRANSFORMATION: load_orders ---
+Steps:
+1. TableInput — Read from "raw.orders": SELECT order_id, customer_id, order_date, total_amount, status FROM raw.orders
+2. FilterRows — Keep rows where status IN ('COMPLETED','SHIPPED')
+3. SortRows — Sort by order_date ASC
+4. TableOutput — Insert into "dw.fact_orders"
+
+--- JOB: daily_etl_job ---
+Entries:
+1. START
+2. Run Transformation: load_customers.ktr (abort on error)
+3. Run Transformation: load_orders.ktr (abort on error)
+4. SUCCESS — end job`;
+
+let inputMode = 'file', uploadedContent = '', generatedFiles = {}, activeFile = null;
+
+function setMode(m) {
+  inputMode = m;
+  document.getElementById('modeFile').className  = 'seg-btn' + (m==='file'  ? ' on' : '');
+  document.getElementById('modePaste').className = 'seg-btn' + (m==='paste' ? ' on' : '');
+  document.getElementById('dropZone').style.display  = m==='file'  ? '' : 'none';
+  document.getElementById('pasteArea').style.display = m==='paste' ? '' : 'none';
+}
+
+function onDrag(e, over) { e.preventDefault(); document.getElementById('dropZone').classList.toggle('drag', over); }
+function onDrop(e) { e.preventDefault(); onDrag(e, false); const f = e.dataTransfer.files[0]; if (f) readFile(f); }
+function onFileSelect(e) { const f = e.target.files[0]; if (f) readFile(f); }
+function readFile(f) {
+  const r = new FileReader();
+  r.onload = ev => {
+    uploadedContent = ev.target.result;
+    document.getElementById('dropZone').classList.add('has-file');
+    document.getElementById('dropName').textContent = '📄 ' + f.name;
+  };
+  r.readAsText(f);
+}
+function loadExample() { setMode('paste'); document.getElementById('pasteArea').value = EXAMPLE; }
+
+function clearAll() {
+  uploadedContent = ''; generatedFiles = {}; activeFile = null;
+  document.getElementById('pasteArea').value = '';
+  document.getElementById('dropName').textContent = '';
+  document.getElementById('dropZone').classList.remove('has-file');
+  document.getElementById('fileInput').value = '';
+  document.getElementById('xmlArea').value   = '';
+  document.getElementById('xmlTabs').innerHTML  = '';
+  document.getElementById('fileList').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:4px 0">No files generated yet.</div>';
+  ['ktrCount','kjbCount','totalCount'].forEach(id => document.getElementById(id).textContent = '0');
+  document.getElementById('dlAllBtn').disabled = true;
+  document.getElementById('dlOneBtn').disabled = true;
+  document.getElementById('debugBox').style.display = 'none';
+  setProgress(0); setStatus('idle', 'Ready — upload a file or paste instructions.');
+}
+
+function setStatus(type, msg, spinner=false) {
+  const b = document.getElementById('statusBar');
+  b.className = 'status s-' + type;
+  b.innerHTML = (spinner ? '<span class="spinner"></span>' : '') + '<span>' + msg + '</span>';
+}
+function setProgress(p) { document.getElementById('progressBar').style.width = p + '%'; }
+
+async function generate() {
+  const instructions = inputMode === 'paste'
+    ? document.getElementById('pasteArea').value.trim()
+    : uploadedContent.trim();
+
+  if (!instructions) {
+    setStatus('warn', '⚠ No instructions found. Upload a file or paste text first.');
+    return;
+  }
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+  setStatus('load', 'Sending step file to Claude…', true);
+  setProgress(20); generatedFiles = {};
+
+  try {
+    setProgress(35);
+    const formData = new FormData();
+    formData.append('steps_text', instructions);
+    setProgress(50);
+
+    const resp = await fetch("{% url 'generate_pentaho_files' %}", {
+      method: 'POST',
+      headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+      body: formData,
+    });
+
+    setProgress(75);
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: 'HTTP ' + resp.status }));
+      throw new Error(err.error || 'HTTP ' + resp.status);
+    }
+
+    setProgress(85);
+    const zipBlob = await resp.blob();
+    const zip     = await JSZip.loadAsync(zipBlob);
+    const ktr = [], kjb = [];
+
+    for (const [filename, file] of Object.entries(zip.files)) {
+      const xml  = await file.async('string');
+      const ext  = filename.split('.').pop().toLowerCase();
+      const name = filename.replace(/\.[^/.]+$/, '');
+      const entry = { name, type: ext, xml };
+      if (ext === 'ktr') ktr.push(entry);
+      else               kjb.push(entry);
+    }
+
+    const all = [...ktr, ...kjb];
+    if (!all.length) throw new Error('No files found in ZIP response.');
+
+    all.forEach(f => { generatedFiles[f.name] = f; });
+    renderFileList(); renderTabs(); updateMetrics(ktr.length, kjb.length);
+    selectFile(all[0].name);
+    setProgress(100);
+    setStatus('ok', `✓ ${ktr.length} transformation(s) + ${kjb.length} job(s) = ${all.length} file(s) generated.`);
+    document.getElementById('dlAllBtn').disabled = false;
+
+     // === AUTO DOWNLOAD ===
+        const autoDownload = localStorage.getItem("pref_auto_download") !== "false"; // default true
+        if (autoDownload) {
+            downloadAll()
+            toast('pentaho_files.zip downloaded!', 'ok');
+        } else {
+            toast('Auto-download is disabled', 'info');
+        }
+
+
+    document.getElementById('dlOneBtn').disabled = false;
+    setTimeout(() => setProgress(0), 900);
+
+  } catch (e) {
+    setStatus('err', '✗ ' + e.message);
+    setProgress(0); console.error(e);
+  }
+
+  btn.disabled = false; btn.textContent = '⚡ Generate Files';
+}
+
+function updateMetrics(ktr, kjb) {
+  document.getElementById('ktrCount').textContent   = ktr;
+  document.getElementById('kjbCount').textContent   = kjb;
+  document.getElementById('totalCount').textContent = ktr + kjb;
+}
+
+function renderFileList() {
+  const el = document.getElementById('fileList'); el.innerHTML = '';
+  Object.values(generatedFiles).forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'file-row'; row.id = 'row-' + f.name;
+    const lines = f.xml.split('\n').length;
+    row.innerHTML =
+      `<span class="badge ${f.type}">${f.type.toUpperCase()}</span>` +
+      `<span class="file-row-name">${f.name}.${f.type}</span>` +
+      `<span class="file-row-lines">${lines} lines</span>`;
+    row.onclick = () => selectFile(f.name);
+    el.appendChild(row);
+  });
+}
+
+function renderTabs() {
+  const el = document.getElementById('xmlTabs'); el.innerHTML = '';
+  Object.values(generatedFiles).forEach(f => {
+    const t = document.createElement('button');
+    t.className = 'tab ' + f.type; t.id = 'tab-' + f.name;
+    t.textContent = f.name + '.' + f.type;
+    t.onclick = () => selectFile(f.name);
+    el.appendChild(t);
+  });
+}
+
+function selectFile(name) {
+  activeFile = name;
+  const f = generatedFiles[name];
+  document.getElementById('xmlArea').value = f ? f.xml : '';
+  document.querySelectorAll('.tab').forEach(t => {
+    const on = t.id === 'tab-' + name;
+    t.className = 'tab ' + (f ? f.type : '') + (on ? ' active' : '');
+  });
+  document.querySelectorAll('.file-row').forEach(r =>
+    r.classList.toggle('active', r.id === 'row-' + name)
+  );
+}
+
+function downloadCurrent() {
+  if (!activeFile) return;
+  const f = generatedFiles[activeFile];
+  dl(f.xml, f.name + '.' + f.type, 'application/xml');
+}
+
+async function downloadAll() {
+  const files = Object.values(generatedFiles); if (!files.length) return;
+  const zip = new JSZip();
+  files.forEach(f => zip.file(f.name + '.' + f.type, f.xml));
+  const blob = await zip.generateAsync({ type: 'blob' });
+  dl(blob, 'pentaho_files.zip', 'application/zip');
+}
+
+function dl(content, filename, mime) {
+  const blob = content instanceof Blob ? content : new Blob([content], { type: mime });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+
+function copyXml() {
+  const v = document.getElementById('xmlArea').value; if (!v) return;
+  navigator.clipboard.writeText(v).then(() => {
+    setStatus('ok', '✓ XML copied to clipboard.');
+    setTimeout(() => setStatus('idle', 'Ready.'), 2000);
+  });
+}
+
+function setMode(m) {
+  inputMode = m;
+  document.getElementById('modeFile').className  = 'seg-btn' + (m==='file'  ? ' on' : '');
+  document.getElementById('modePaste').className = 'seg-btn' + (m==='paste' ? ' on' : '');
+  document.getElementById('dropZone').style.display  = m==='file'  ? '' : 'none';
+  document.getElementById('pasteArea').style.display = m==='paste' ? '' : 'none';
+
+  // Show mic button only in paste mode
+  const micBtn = document.getElementById('micBtn');
+  micBtn.style.display = m === 'paste' ? 'inline-flex' : 'none';
+
+  // Stop mic if switching away from paste mode
+  if (m !== 'paste' && isListening) stopMic();
+}
+
+/* ── MICROPHONE (Web Speech API) ─────────────────────────────────── */
+let recognition = null;
+let isListening = false;
+let micRestartTimer = null;
+
+function initRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert('Speech recognition is not supported.\nPlease use Google Chrome or Microsoft Edge.');
+    return null;
+  }
+
+  const r = new SpeechRecognition();
+  r.lang = 'en-US';
+  r.continuous = true;    // keep listening
+  r.interimResults = true; // show partial results
+
+  r.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const transcript = e.results[i][0].transcript;
+      if (e.results[i].isFinal) {
+        const area = document.getElementById('pasteArea');
+        area.value += (area.value ? ' ' : '') + transcript.trim(); // append final result
+        document.getElementById('micInterim').textContent = '';   // clear interim
+      } else {
+        interim += transcript; // show interim
+      }
+    }
+    document.getElementById('micInterim').textContent = interim;
+  };
+
+  r.onerror = (e) => {
+    if (e.error === 'no-speech') return; // normal silence
+
+    const msgs = {
+      'not-allowed':  'Microphone access denied. Please allow mic in your browser.',
+      'audio-capture':'No microphone found.',
+      'network':      'Network error during recognition.',
+    };
+    toast(msgs[e.error] || 'Mic error: ' + e.error, 'err');
+    stopMic();
+  };
+
+  r.onend = () => {
+    // Only restart if user has NOT stopped
+    if (!isListening) return;
+
+    // tiny delay to prevent restart loop
+    clearTimeout(micRestartTimer);
+    micRestartTimer = setTimeout(() => {
+      if (isListening && recognition) {
+        try { recognition.start(); } catch(err) { /* ignore */ }
+      }
+    }, 200);
+  };
+
+  return r;
+}
+
+function toggleMic() {
+  isListening ? stopMic() : startMic();
+}
+
+function startMic() {
+  recognition = initRecognition();
+  if (!recognition) return;
+
+  isListening = true;
+  recognition.start();
+
+  const btn = document.getElementById('micBtn');
+  btn.innerHTML = '⏹ Stop Mic';
+  btn.classList.add('active');
+
+  document.getElementById('micStatus').style.display = 'flex';
+  document.getElementById('micStatusText').textContent = 'Listening… speak now';
+
+  toast('🎙 Microphone started', 'ok');
+}
+
+function stopMic() {
+  isListening = false; // prevent auto restart
+  clearTimeout(micRestartTimer);
+  micRestartTimer = null;
+
+  if (recognition) {
+    recognition.stop();
+    recognition = null;
+  }
+
+  const btn = document.getElementById('micBtn');
+  btn.innerHTML = '🎙 Start Mic';
+  btn.classList.remove('active');
+
+  document.getElementById('micStatus').style.display = 'none';
+  document.getElementById('micInterim').textContent = '';
+
+  toast('🎙 Microphone stopped', 'ok');
+}
+</script>
+</body>
+</html>

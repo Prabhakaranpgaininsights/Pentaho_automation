@@ -1,0 +1,1205 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Table Join Builder — Pentaho AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f14;--surface:#151820;--surface2:#1c2030;--border:#2a2f3d;
+  --accent:#4f46e5;--success:#22c55e;--error:#ef4444;--warn:#f59e0b;
+  --text:#e8eaf0;--muted:#6b7280;
+  --sans:'Inter',sans-serif;--mono:'Courier New',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+.shell{display:flex;min-height:100vh}
+
+/* ── Sidebar ── */
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.5rem 0;flex-shrink:0}
+.main{flex:1;overflow-y:auto;padding:2rem 2rem 3rem}
+@media(max-width:800px){.sidebar{display:none}.main{padding:1.25rem}}
+.sb-logo{padding:0 1.25rem 1.5rem;border-bottom:1px solid var(--border);margin-bottom:1rem;display:flex;align-items:center;gap:10px}
+.sb-logo-fb{width:36px;height:36px;border-radius:8px;background:rgba(79,70,229,.2);border:1px solid rgba(79,70,229,.4);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.sb-logo-t h2{font-size:15px;font-weight:600;color:var(--accent)}
+.sb-logo-t p{font-size:11px;color:var(--muted);margin-top:2px}
+.sb-sec{padding:0 .75rem;margin-bottom:.25rem}
+.sb-lbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:.5rem .5rem .25rem}
+.sb-link{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:all .15s;cursor:pointer;border:none;background:none;width:100%;font-family:var(--sans)}
+.sb-link:hover{background:rgba(79,70,229,.08);color:#a5b4fc}
+.sb-link.active{background:rgba(79,70,229,.15);color:#a5b4fc;border-left:2px solid var(--accent);padding-left:8px}
+.sb-ico{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.sb-badge-count{margin-left:auto;background:var(--success);color:#fff;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px}
+.sb-foot{margin-top:auto;padding:1rem 1.25rem 0;border-top:1px solid var(--border)}
+.sb-foot p{font-size:11px;color:var(--muted);line-height:1.6}
+.sb-foot strong{color:var(--text)}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:.5rem 1rem;border-radius:8px;border:1px solid transparent;font-size:13px;font-weight:500;cursor:pointer;transition:all .12s;font-family:var(--sans);white-space:nowrap}
+.btn-outline{background:var(--surface2);color:var(--muted);border-color:var(--border)}
+.btn-outline:hover{background:var(--border);color:var(--text)}
+.btn-outline:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:#3b3fd5}
+.btn-primary:disabled{background:var(--border);color:var(--muted);cursor:not-allowed}
+.btn-execute{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-size:14px;padding:.6rem 1.4rem;box-shadow:0 2px 10px rgba(34,197,94,.2)}
+.btn-execute:hover{filter:brightness(1.1);box-shadow:0 4px 16px rgba(34,197,94,.35);transform:translateY(-1px)}
+.btn-execute:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;box-shadow:none;transform:none;filter:none}
+.btn-green{background:#16a34a;color:#fff}
+.btn-green:hover{background:#15803d}
+.btn-green:disabled{opacity:.4;cursor:not-allowed}
+.btn-danger{background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
+.btn-danger:hover{background:rgba(239,68,68,.22)}
+.btn-sm{padding:3px 9px;font-size:11px;border-radius:6px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:.9rem;align-items:center}
+
+/* ── Cards ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.4rem 1.5rem;margin-bottom:1.25rem}
+.card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:.85rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* ── Upload Zone ── */
+.upload-zone{border:2px dashed var(--border);border-radius:14px;padding:3rem 2rem;text-align:center;cursor:pointer;transition:all .25s;background:var(--surface2);position:relative;overflow:hidden}
+.upload-zone::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(79,70,229,.04) 0%,transparent 70%);pointer-events:none}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(79,70,229,.07);box-shadow:0 0 0 4px rgba(79,70,229,.08)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:48px;margin-bottom:1rem;display:block;filter:drop-shadow(0 0 16px rgba(79,70,229,.3))}
+.upload-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:.4rem}
+.upload-title span{color:var(--accent)}
+.upload-sub{font-size:13px;color:var(--muted);margin-bottom:1.2rem}
+.upload-formats{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.fmt-badge{padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--muted)}
+
+/* ── File info strip ── */
+.file-strip{display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:10px;margin-top:1rem}
+.file-strip-icon{font-size:22px;flex-shrink:0}
+.file-strip-info{flex:1}
+.file-strip-name{font-family:var(--mono);font-size:13px;font-weight:600;color:#86efac}
+.file-strip-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.file-strip-change{font-size:11px;color:var(--accent);cursor:pointer;text-decoration:underline;flex-shrink:0}
+
+/* ── Parsed Step Cards ── */
+.parsed-section{margin-bottom:1.25rem}
+.parsed-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.6rem;display:flex;align-items:center;gap:6px;padding-bottom:.4rem;border-bottom:1px solid var(--border)}
+.step-cards{display:flex;flex-direction:column;gap:8px}
+.step-card{border-radius:10px;padding:12px 14px;border:1px solid;display:flex;align-items:flex-start;gap:12px}
+.step-card.source{background:rgba(79,70,229,.05);border-color:rgba(79,70,229,.2)}
+.step-card.join{background:rgba(245,158,11,.05);border-color:rgba(245,158,11,.2)}
+.step-card.target{background:rgba(34,197,94,.05);border-color:rgba(34,197,94,.2)}
+.step-card.output{background:rgba(56,189,248,.05);border-color:rgba(56,189,248,.15)}
+.step-card-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.step-card-body{flex:1;min-width:0}
+.step-card-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.source .step-card-label{color:#818cf8}
+.join   .step-card-label{color:#fbbf24}
+.target .step-card-label{color:#34d399}
+.output .step-card-label{color:#38bdf8}
+.step-card-title{font-size:13px;font-weight:600;color:var(--text)}
+.step-card-meta{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.6;font-family:var(--mono)}
+.step-card-tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;margin-right:4px;margin-top:4px}
+.tag-inner{background:rgba(79,70,229,.2);color:#a5b4fc}
+.tag-left{background:rgba(8,145,178,.2);color:#7dd3fc}
+.tag-right{background:rgba(13,148,136,.2);color:#5eead4}
+.tag-full{background:rgba(124,58,237,.2);color:#c4b5fd}
+.tag-create{background:rgba(34,197,94,.15);color:#86efac}
+.tag-existing{background:rgba(245,158,11,.15);color:#fde68a}
+.tag-upsert{background:rgba(56,189,248,.15);color:#7dd3fc}
+
+/* ── Grid ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+@media(max-width:860px){.grid2{grid-template-columns:1fr}}
+.metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1rem}
+.metric{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.7rem 1rem}
+.metric-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.metric-value{font-size:22px;font-weight:600;color:var(--text)}
+.metric-value.ktr{color:#818cf8}.metric-value.kjb{color:#34d399}
+
+/* ── Status / Progress ── */
+.status{padding:.65rem 1rem;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:8px;line-height:1.4;margin-top:.85rem}
+.s-idle{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.s-load{background:rgba(79,70,229,.1);color:#a5b4fc;border:1px solid rgba(79,70,229,.3)}
+.s-ok{background:rgba(34,197,94,.08);color:#86efac;border:1px solid rgba(34,197,94,.3)}
+.s-err{background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
+.s-warn{background:rgba(245,158,11,.08);color:#fde68a;border:1px solid rgba(245,158,11,.3)}
+.spinner{width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progress-wrap{height:4px;background:var(--border);border-radius:2px;margin-top:10px;overflow:hidden}
+.progress-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .3s;width:0%}
+
+/* ── Exec Log ── */
+.exec-panel{background:rgba(34,197,94,.04);border:1px solid rgba(34,197,94,.18);border-radius:12px;padding:1.2rem 1.3rem;margin-bottom:1.25rem;display:none}
+.exec-panel.show{display:block}
+.exec-log{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:var(--mono);font-size:12px;color:var(--muted);max-height:240px;overflow-y:auto;line-height:1.9}
+.log-ok{color:#86efac}.log-err{color:#fca5a5}.log-info{color:#7dd3fc}.log-warn{color:#fde68a}
+
+/* ── File list / XML ── */
+.file-list{display:flex;flex-direction:column;gap:6px}
+.file-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);cursor:pointer;transition:background .1s}
+.file-row:hover{background:rgba(79,70,229,.08)}
+.file-row.active{border-color:var(--accent);background:rgba(79,70,229,.12)}
+.badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
+.badge.ktr{background:rgba(79,70,229,.2);color:#a5b4fc}
+.badge.kjb{background:rgba(34,197,94,.15);color:#86efac}
+.file-row-name{font-family:var(--mono);font-size:12px;color:var(--text);flex:1}
+.tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:.75rem}
+.tab{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .12s;font-family:var(--sans)}
+.tab.active.ktr{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tab.active.kjb{background:#16a34a;color:#fff;border-color:#16a34a}
+textarea.xml-area{width:100%;height:340px;border:1px solid var(--border);border-radius:8px;padding:.75rem;font-size:12px;font-family:var(--mono);resize:vertical;outline:none;background:var(--surface2);color:var(--text);line-height:1.6}
+textarea.xml-area:focus{border-color:var(--accent)}
+
+/* ── SQL box ── */
+.sql-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:var(--mono);font-size:12px;color:#a5b4fc;line-height:1.8;white-space:pre-wrap;margin-bottom:.75rem;max-height:300px;overflow-y:auto}
+
+/* ── Info / Warn box ── */
+.info-box{background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:12px 16px;font-size:12px;color:#7dd3fc;line-height:1.7;margin-bottom:1.25rem}
+.info-box strong{color:#38bdf8}
+.info-box code{background:rgba(56,189,248,.1);padding:1px 6px;border-radius:4px;font-family:var(--mono)}
+
+/* ── Error overlay ── */
+.parse-error{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:12px 16px;font-size:12px;color:#fca5a5;line-height:1.7;margin-top:1rem;display:none}
+.parse-error.show{display:block}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.75rem;flex-wrap:wrap;gap:10px}
+.topbar h1{font-size:20px;font-weight:600;color:var(--text)}
+.topbar p{font-size:13px;color:var(--muted);margin-top:2px}
+.footer{margin-top:2rem;font-size:12px;color:var(--muted);text-align:center}
+.divider{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:1rem 0 .6rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.docs-nav-new {
+  margin-left: auto;
+  background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.22);
+  color: #86efac; font-size: 9px; font-weight: 700;
+  padding: 1px 5px; border-radius: 10px;
+}
+
+.docs-nav-old {
+  margin-left: auto;
+  background: rgba(255, 77, 77, 0.1);      /* light red background */
+  border: 1px solid rgba(255, 77, 77, 0.22); /* red border */
+  color: #ff4d4d;                          /* red text */
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+}
+
+.toast { position:fixed; bottom:1.5rem; right:1.5rem; background:var(--surface); border:1px solid var(--border); color:var(--text); font-size:13px; padding:10px 16px; border-radius:8px; z-index:9999; opacity:0; transform:translateY(8px); transition:all .25s; pointer-events:none; }
+.toast.show { opacity:1; transform:translateY(0); }
+.toast.ok  { border-color:rgba(34,197,94,.4);  color:#86efac; }
+.toast.err { border-color:rgba(239,68,68,.4);  color:#fca5a5; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ═══ SIDEBAR ═══ -->
+ {% include 'components/sidebar.html' %}
+<!-- <aside class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-fb">⚡</div>
+    <div class="sb-logo-t"><h2>Pentaho AI</h2><p>Gain Insights Platform</p></div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-lbl">Main</div>
+    <a class="sb-link" href="{% url 'dashboard' %}"><span class="sb-ico">📊</span> Dashboard</a>
+    <a class="sb-link" href="{% url 'generate_pentaho' %}"><span class="sb-ico">⚙️</span> File Generator <span class="docs-nav-new">AI New</span></a>
+    <a class="sb-link active" href="#"><span class="sb-ico">🔗</span> Table Join Builder</a>
+    <a class="sb-link" href="{% url 'table_builder' %}"><span class="sb-ico">🗄</span> Table Builder</a>
+  </div>
+  <div class="sb-sec" style="margin-top:.75rem">
+    <div class="sb-lbl">Generate</div>
+    <a class="sb-link" href="{% url 'upload_tr' %}"><span class="sb-ico">🔄</span> KTR / KJB <span class="docs-nav-old">Old Version</span> </a> 
+  </div>
+  <div class="sb-foot">
+    <p>Mode: <strong>{{ model }}</strong></p>
+    <p style="margin-top:4px">Status: <strong style="color:var(--success)">● Ready</strong></p>
+  </div>
+</aside> -->
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+
+  <div class="topbar">
+    <div>
+      <h1>🔗 Table Join Builder</h1>
+      <p>Upload your steps file → Review parsed steps → Generate &amp; Run</p>
+    </div>
+  </div>
+
+  <!-- FORMAT GUIDE -->
+  <div class="info-box">
+    <strong>📋 Steps File Format</strong> — Each row defines one instruction:<br>
+    <code class="step source">SOURCE, table_name, connection_name, alias, col1;col2;col3, WHERE_filter, OR/AND</code><br>
+    <code class="step join">JOIN,   alias_a.col = alias_b.col, INNER|LEFT|RIGHT|FULL</code><br>
+    <code class="step target">TARGET, table_name, connection_name, create|existing|upsert, upsert_key</code><br>
+    <code class="step output">OUTPUT, source_column, target_column</code><br>
+    Supports <strong>.csv</strong> and <strong>.txt</strong> — lines starting with <strong>#</strong> are comments.
+    Multiple SOURCE rows = multi-table join. Multiple JOIN rows = multi-condition ON clause.
+  </div>
+
+  <!-- ═══ UPLOAD CARD ═══ -->
+  <div class="card">
+    <div class="card-title">📂 Upload Steps File</div>
+
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="stepsFileInput" accept=".csv,.txt" onchange="handleFile(this.files[0])"/>
+      <span class="upload-icon">📄</span>
+      <div class="upload-title">Drop your file here or <span>click to browse</span></div>
+      <div class="upload-sub">Your steps file defines all tables, join types, and target configuration</div>
+      <div class="upload-formats">
+        <span class="fmt-badge">CSV</span>
+        <span class="fmt-badge">TXT</span>
+      </div>
+    </div>
+
+    <div id="fileStrip" style="display:none"></div>
+    <div class="parse-error" id="parseError"></div>
+  </div>
+
+  <!-- ═══ PARSED STEPS (shown after upload) ═══ -->
+  <div class="card" id="parsedCard" style="display:none">
+    <div class="card-title">
+      ✅ Parsed Steps
+      <span id="parsedBadge" style="margin-left:auto;font-size:11px;color:var(--muted)"></span>
+    </div>
+
+    <!-- SOURCE TABLES -->
+    <div class="parsed-section">
+      <div class="parsed-section-title">🟦 Source Tables</div>
+      <div class="step-cards" id="sourceCards"></div>
+    </div>
+
+    <!-- JOIN CONDITIONS -->
+    <div class="parsed-section" id="joinSection">
+      <div class="parsed-section-title">⚙️ Join Conditions</div>
+      <div class="step-cards" id="joinCards"></div>
+    </div>
+
+    <!-- TARGET TABLE -->
+    <div class="parsed-section">
+      <div class="parsed-section-title">🎯 Target Table</div>
+      <div class="step-cards" id="targetCards"></div>
+    </div>
+
+    <!-- OUTPUT COLUMNS -->
+    <div class="parsed-section" id="outputSection" style="display:none">
+      <div class="parsed-section-title">📤 Output Columns</div>
+      <div class="step-cards" id="outputCards"></div>
+    </div>
+
+    <!-- SQL Preview -->
+    <div id="sqlCard" style="display:none;margin-top:.75rem">
+      <div class="divider">🔍 SQL Preview</div>
+      <div class="sql-box" id="sqlBox"></div>
+    </div>
+
+    <!-- Status + Actions -->
+    <div id="statusBar" class="status s-idle" style="margin-top:1rem">
+      <span>Steps loaded. Click ⚡ Generate Files to build KTR + KJB.</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+
+    <div class="btns" style="margin-top:1rem">
+      <button class="btn btn-outline" onclick="previewSQL()">🔍 Preview SQL</button>
+      <button class="btn btn-primary" id="genBtn" onclick="generateJoin()">⚡ Generate Files</button>
+      <button class="btn btn-execute" id="execBtn" onclick="executeJoin()" disabled>▶ Run Pipeline</button>
+      <button class="btn btn-outline btn-sm" onclick="clearAll()" style="margin-left:auto">✕ Clear</button>
+    </div>
+  </div>
+
+  <!-- ═══ EXEC LOG ═══ -->
+  <div class="exec-panel" id="execPanel">
+    <div class="card-title" style="margin-bottom:.75rem;color:#86efac">▶ Pipeline Execution Log</div>
+    <div class="exec-log" id="execLog"></div>
+    <div class="btns" style="margin-top:.75rem">
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('execLog').innerHTML=''">🗑 Clear Log</button>
+    </div>
+  </div>
+
+  <!-- ═══ RESULTS ═══ -->
+  <div class="card" id="resultsCard" style="display:none">
+    <div class="grid2">
+      <div>
+        <div class="card-title">📁 Generated Files</div>
+        <div class="metric-row">
+          <div class="metric"><div class="metric-label">KTR</div><div class="metric-value ktr" id="ktrCount">0</div></div>
+          <div class="metric"><div class="metric-label">KJB</div><div class="metric-value kjb" id="kjbCount">0</div></div>
+          <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="totalCount">0</div></div>
+        </div>
+        <div id="fileList" class="file-list"></div>
+        <div class="btns">
+          <button class="btn btn-execute"              onclick="executeJoin()">▶ Run Pipeline</button>
+          <button class="btn btn-green"   id="dlAllBtn" onclick="downloadAll()"     disabled>⬇ Download All</button>
+          <button class="btn btn-outline" id="dlOneBtn" onclick="downloadCurrent()" disabled>Download Selected</button>
+          <button class="btn btn-outline"              onclick="cpXml()">📋 Copy XML</button>
+        </div>
+      </div>
+      <div>
+        <div class="card-title">📄 XML Preview</div>
+        <div id="xmlTabs" class="tabs"></div>
+        <textarea id="xmlArea" class="xml-area" readonly placeholder="Select a file above…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Powered by <strong>Gain Insights</strong></div>
+  <!-- ── Toast ── -->
+  <div class="toast" id="toast"></div>
+</main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+
+function toast(msg, type = "ok") {
+    // Check if toast notifications are enabled
+    const showToast = localStorage.getItem('pref_toast');
+    if (showToast === 'false') return; // do nothing if disabled
+
+    // Get the toast element
+    const el = document.getElementById("toast");
+    if (!el) return; // exit if element not found
+
+    // Set message and style
+    el.textContent = msg;
+    el.className = "toast show " + type;
+
+    // Clear previous timeout if any
+    if (el._t) clearTimeout(el._t);
+
+    // Hide toast after 2.8 seconds
+    el._t = setTimeout(() => {
+        el.classList.remove("show");
+    }, 2800);
+}
+
+
+/* ═══════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════ */
+const CSRF = "{{ csrf_token }}";
+let parsedConfig   = null;   // { sources, joins, target, outputCols }
+let generatedFiles = {};
+let activeFile     = null;
+let rawFileContent = null;
+
+/* ═══════════════════════════════════════════════════
+   DRAG & DROP INIT
+═══════════════════════════════════════════════════ */
+window.addEventListener("DOMContentLoaded", () => {
+  const zone = document.getElementById("uploadZone");
+  zone.addEventListener("dragover",  e => { e.preventDefault(); zone.classList.add("drag"); });
+  zone.addEventListener("dragleave", ()  => zone.classList.remove("drag"));
+  zone.addEventListener("drop", e => {
+    e.preventDefault(); zone.classList.remove("drag");
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+});
+
+/* ═══════════════════════════════════════════════════
+   FILE HANDLER
+═══════════════════════════════════════════════════ */
+function handleFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['csv','txt'].includes(ext)) {
+    showParseError("Unsupported file type. Please upload a .csv or .txt file.");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    rawFileContent = e.target.result;
+    try {
+      parsedConfig = parseStepsFile(e.target.result);
+      validateParsed(parsedConfig);
+      renderFileStrip(file);
+      renderParsedSteps(parsedConfig);
+      hideParseError();
+      document.getElementById("parsedCard").style.display = "";
+      setSt("idle", `Steps loaded — ${parsedConfig.sources.length} source table(s), ${parsedConfig.joins.length} join condition(s). Click ⚡ Generate Files.`);
+    } catch(err) {
+      rawFileContent = null; 
+      showParseError(err.message);
+      document.getElementById("parsedCard").style.display = "none";
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ═══════════════════════════════════════════════════
+   PARSER  — CSV / TXT
+   Supported row types:
+     SOURCE, table, conn, alias, col1;col2, where_filter
+     JOIN,   a.col = b.col, INNER
+     TARGET, table, conn, create|existing|upsert, upsert_key
+     OUTPUT, src_col, tgt_col
+═══════════════════════════════════════════════════ */
+function parseStepsFile(content) {
+  const sources = [], joins = [], outputCols = [];
+  let target = null;
+
+  const lines = content
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l && !l.startsWith('#') && !l.startsWith('//'));
+
+  lines.forEach((line, idx) => {
+    // Split by comma but NOT inside parentheses/quotes
+    const parts = splitCSVLine(line);
+    if (!parts.length) return;
+
+    const type = parts[0].trim().toUpperCase();
+
+    if (type === 'SOURCE' || type === 'TABLE') {
+      // SOURCE, table_name, connection, alias, columns(;-separated), where_filter
+      if (!parts[1]) throw new Error(`Line ${idx+1}: SOURCE row missing table name.`);
+      sources.push({
+        table:  parts[1]?.trim() || '',
+        conn:   parts[2]?.trim() || '',
+        alias:  parts[3]?.trim() || String.fromCharCode(97 + sources.length), // a, b, c…
+        cols:   (parts[4]?.trim() || '*').replace(/;/g, ', '),
+        where:  parts[5]?.trim() || '',
+        operator: (parts[6]?.trim() || 'AND').toUpperCase(),
+      });
+
+    } else if (type === 'JOIN') {
+      // JOIN, alias_a.col = alias_b.col, INNER|LEFT|RIGHT|FULL
+      if (!parts[1]) throw new Error(`Line ${idx+1}: JOIN row missing key expression.`);
+      const expr = parts[1].trim();
+      if (!expr.includes('=')) throw new Error(`Line ${idx+1}: JOIN key must be "tableA.col = tableB.col". Got: "${expr}"`);
+      const [left, right] = expr.split('=').map(s => s.trim());
+      const joinType = (parts[2]?.trim() || 'INNER').toUpperCase();
+      if (!['INNER','LEFT','RIGHT','FULL'].includes(joinType))
+        throw new Error(`Line ${idx+1}: JOIN type must be INNER, LEFT, RIGHT, or FULL. Got: "${joinType}"`);
+      joins.push({ left, right, type: joinType });
+
+    } else if (type === 'TARGET') {
+      // TARGET, table_name, connection, create|existing|upsert, upsert_key
+      if (!parts[1]) throw new Error(`Line ${idx+1}: TARGET row missing table name.`);
+      const mode = (parts[3]?.trim() || 'create').toLowerCase();
+      if (!['create','existing','upsert'].includes(mode))
+        throw new Error(`Line ${idx+1}: TARGET mode must be create, existing, or upsert. Got: "${mode}"`);
+      target = {
+        table:     parts[1]?.trim() || '',
+        conn:      parts[2]?.trim() || '',
+        mode,
+        upsertKey: parts[4]?.trim() || '',
+      };
+
+    } else if (type === 'OUTPUT' || type === 'COL') {
+      // OUTPUT, source_col, target_col
+      if (!parts[1]) throw new Error(`Line ${idx+1}: OUTPUT row missing source column.`);
+      outputCols.push({
+        src: parts[1]?.trim() || '',
+        tgt: parts[2]?.trim() || parts[1]?.trim() || '',
+      });
+    }
+    // Ignore unknown row types silently
+  });
+
+  return { sources, joins, target, outputCols };
+}
+
+function splitCSVLine(line) {
+  // Simple CSV split respecting quoted strings
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQ = !inQ; }
+    else if (ch === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+function validateParsed(cfg) {
+
+  // ✅ At least 1 source
+  if (!cfg.sources.length) {
+    document.querySelector(".source").style.color = "red";
+    document.querySelector(".source").style.fontWeight = "bold";
+    throw new Error("No SOURCE rows found. Add at least one SOURCE row.");
+  }
+
+  // ❌ JOIN present but only 1 source
+  if (cfg.sources.length < 2 && cfg.joins.length > 0) {
+    document.querySelector(".source").style.color = "red";
+    document.querySelector(".source").style.fontWeight = "bold";
+    throw new Error("JOIN condition provided but only one SOURCE table found. Add two or more SOURCE tables.");
+  }
+
+  // ❌ Multiple sources but no JOIN
+  if (cfg.sources.length > 1 && !cfg.joins.length) {
+    document.querySelector(".join").style.color = "red";
+    document.querySelector(".join").style.fontWeight = "bold";
+    throw new Error("Multiple SOURCE tables detected. Please add at least one JOIN condition.");
+  }
+
+  // ❌ Not enough joins
+  if (cfg.sources.length > 1 && cfg.joins.length < (cfg.sources.length - 1)) {
+    document.querySelector(".join").style.color = "red";
+    document.querySelector(".join").style.fontWeight = "bold";
+    throw new Error("Insufficient JOIN conditions. Each SOURCE must be properly joined.");
+  }
+
+  // ✅ TARGET validation
+  if (!cfg.target) {
+    document.querySelector(".target").style.color = "red";
+    document.querySelector(".target").style.fontWeight = "bold";
+    throw new Error("No TARGET row found. Add a TARGET row.");
+  }
+
+  if (!cfg.target.table) {
+    document.querySelector(".target").style.color = "red";
+    document.querySelector(".target").style.fontWeight = "bold";
+    throw new Error("TARGET row is missing a table name.");
+  }
+
+  // ❌ OUTPUT missing
+  if (!cfg.outputCols || !cfg.outputCols.length) {
+    document.querySelector(".output").style.color = "red";
+    document.querySelector(".output").style.fontWeight = "bold";
+    throw new Error("No OUTPUT rows found. Please add OUTPUT columns.");
+  }
+
+  // ❌ OUTPUT alias validation
+  const sourceAliases = cfg.sources.map(s => s.alias);
+
+  cfg.outputCols.forEach(o => {
+    const alias = o.src.split(".")[0];
+
+    if (!sourceAliases.includes(alias)) {
+      document.querySelector(".output").style.color = "red";
+      document.querySelector(".output").style.fontWeight = "bold";
+      throw new Error(`Invalid OUTPUT column: ${o.src}`);
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   RENDER FILE STRIP
+═══════════════════════════════════════════════════ */
+function renderFileStrip(file) {
+  const strip = document.getElementById("fileStrip");
+  strip.style.display = "";
+  strip.innerHTML = `
+    <div class="file-strip">
+      <span class="file-strip-icon">📄</span>
+      <div class="file-strip-info">
+        <div class="file-strip-name">${esc(file.name)}</div>
+        <div class="file-strip-meta">${(file.size/1024).toFixed(1)} KB &nbsp;·&nbsp; ${file.type||'text/plain'}</div>
+      </div>
+      <span class="file-strip-change" onclick="clearAll()">✕ Remove</span>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════════
+   RENDER PARSED STEP CARDS
+═══════════════════════════════════════════════════ */
+function renderParsedSteps(cfg) {
+  // Summary badge
+  document.getElementById("parsedBadge").textContent =
+    `${cfg.sources.length} source · ${cfg.joins.length} join · 1 target${cfg.outputCols.length?' · '+cfg.outputCols.length+' output cols':''}`;
+
+  // ── SOURCE CARDS ──
+  const sc = document.getElementById("sourceCards");
+  sc.innerHTML = "";
+const tableIcons = ['🟦','🟩','🟧','🟥','🟪','⬛'];
+cfg.sources.forEach((s, i) => {
+  const card = document.createElement("div");
+  card.className = "step-card source";
+  card.innerHTML = `
+    <span class="step-card-icon">${tableIcons[i]||'▪️'}</span>
+    <div class="step-card-body">
+      <div class="step-card-label">Table ${String.fromCharCode(65+i)} — Source ${i+1}</div>
+      <div class="step-card-title">
+        ${esc(s.table)}
+        <span style="font-size:11px;color:var(--muted);font-weight:400">
+          as <code style="color:#818cf8">${esc(s.alias)}</code>
+        </span>
+      </div>
+      <div class="step-card-meta">
+        ${s.conn ? `🔌 ${esc(s.conn)}<br>` : ''}
+        📋 Columns: <strong style="color:var(--text)">${esc(s.cols)}</strong>
+        ${s.where
+          ? `<br>🔍 WHERE: <strong style="color:#fde68a">${esc(s.where)}</strong>`
+          : '<br><span style="color:var(--muted);font-style:italic">No WHERE filter</span>'
+        }
+        ${i > 0
+          ? `<br>🔗 Combined with previous using:
+              <span style="
+                display:inline-block;
+                margin-left:4px;
+                padding:1px 8px;
+                border-radius:4px;
+                font-size:10px;
+                font-weight:700;
+                background:${s.operator === 'OR'
+                  ? 'rgba(245,158,11,.2)' : 'rgba(79,70,229,.2)'};
+                color:${s.operator === 'OR' ? '#fbbf24' : '#a5b4fc'};
+              ">${esc(s.operator || 'AND')}</span>`
+          : ''
+        }
+      </div>
+    </div>`;
+  sc.appendChild(card);
+});
+
+  // ── JOIN CARDS ──
+  const jc = document.getElementById("joinCards");
+  jc.innerHTML = "";
+  if (!cfg.joins || cfg.joins.length === 0) {
+    joinSection.style.display = "none";
+  } else {
+    joinSection.style.display = ""; // show
+  const joinColors = { INNER:'tag-inner', LEFT:'tag-left', RIGHT:'tag-right', FULL:'tag-full' };
+  cfg.joins.forEach((j, i) => {
+    const card = document.createElement("div");
+    card.className = "step-card join";
+    card.innerHTML = `
+      <span class="step-card-icon">🔗</span>
+      <div class="step-card-body">
+        <div class="step-card-label">Join Condition ${i+1}</div>
+        <div class="step-card-title" style="font-family:var(--mono);font-size:13px">
+          ${esc(j.left)} <span style="color:var(--muted)">=</span> ${esc(j.right)}
+        </div>
+        <div style="margin-top:5px">
+          <span class="step-card-tag ${joinColors[j.type]||'tag-inner'}">${esc(j.type)} JOIN</span>
+        </div>
+      </div>`;
+    jc.appendChild(card);
+  });
+  }
+
+  // ── TARGET CARD ──
+  const tc = document.getElementById("targetCards");
+  tc.innerHTML = "";
+  const t = cfg.target;
+  const modeTag  = { create:'tag-create', existing:'tag-existing', upsert:'tag-upsert' }[t.mode] || 'tag-create';
+  const modeIcon = { create:'🆕 Create table', existing:'📋 Load into existing', upsert:'🔄 Upsert (merge)' }[t.mode] || t.mode;
+  const card = document.createElement("div");
+  card.className = "step-card target";
+  card.innerHTML = `
+    <span class="step-card-icon">🎯</span>
+    <div class="step-card-body">
+      <div class="step-card-label">Target Table</div>
+      <div class="step-card-title">${esc(t.table)}</div>
+      <div class="step-card-meta">
+        ${t.conn ? `🔌 ${esc(t.conn)}<br>` : ''}
+      </div>
+      <div style="margin-top:5px">
+        <span class="step-card-tag ${modeTag}">${modeIcon}</span>
+        ${t.upsertKey ? `<span class="step-card-tag" style="background:rgba(56,189,248,.1);color:#7dd3fc">Key: ${esc(t.upsertKey)}</span>` : ''}
+      </div>
+    </div>`;
+  tc.appendChild(card);
+
+  // ── OUTPUT COLUMNS ──
+  if (cfg.outputCols.length) {
+    document.getElementById("outputSection").style.display = "";
+    const oc = document.getElementById("outputCards");
+    oc.innerHTML = "";
+    const ocCard = document.createElement("div");
+    ocCard.className = "step-card output";
+    ocCard.innerHTML = `
+      <span class="step-card-icon">📤</span>
+      <div class="step-card-body">
+        <div class="step-card-label">${cfg.outputCols.length} Column Mapping(s)</div>
+        <div class="step-card-meta" style="line-height:2">
+          ${cfg.outputCols.map(c =>
+            `<span style="display:inline-block;margin-right:12px">
+              <code style="color:#818cf8">${esc(c.src)}</code>
+              <span style="color:var(--muted)"> → </span>
+              <code style="color:#86efac">${esc(c.tgt)}</code>
+            </span>`
+          ).join('')}
+        </div>
+      </div>`;
+    oc.appendChild(ocCard);
+  } else {
+    document.getElementById("outputSection").style.display = "none";
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   SQL PREVIEW
+═══════════════════════════════════════════════════ */
+// function previewSQL() {
+//   if (!parsedConfig) return;
+
+//   const c = parsedConfig;
+//   const T = c.target.table;
+//   console.log(c);
+  
+//   // ---------------------------
+//   // SELECT clause
+//   // ---------------------------
+//   const sel = c.outputCols.length
+//     ? c.outputCols.map(o => `  ${o.src} AS ${o.tgt}`).join(",\n")
+//     : "  *";
+
+//   // ---------------------------
+//   // FROM + JOIN
+//   // ---------------------------
+//   let fromClause = `  ${c.sources[0].table} ${c.sources[0].alias}`;
+//   for (let i = 1; i < c.sources.length; i++) {
+//     const j = c.joins[i - 1] || c.joins[0];
+//     fromClause += `\n${j ? j.type : 'INNER'} JOIN ${c.sources[i].table} ${c.sources[i].alias}`;
+//   }
+
+//   const onClause = c.joins
+//     .map(j => `${j.left} = ${j.right}`)
+//     .join("\n    AND ");
+//   fromClause += `\n  ON ${onClause}`;
+
+//   // ---------------------------
+//   // WHERE clause with correct OR/AND between tables
+//   // ---------------------------
+// const whereClause = c.sources
+//   .filter(s => s.where)
+//   .map((s, i) => {
+//     let condition = s.where.trim();
+//     // remove extra wrapping parentheses
+//     condition = condition.replace(/^\((.*)\)$/, "$1");
+//     condition = `(${condition})`;  // wrap again for precedence
+
+//     // use operator from step file; default AND if undefined
+//     const op = i === 0 ? "" : (s.operator || "AND");
+//     return `${op} ${condition}`.trim();
+//   })
+//   .join(" ");
+
+//   // ---------------------------
+//   // BUILD SQL
+//   // ---------------------------
+//   let sql = "";
+
+//   if (c.target.mode === "create") {
+//     sql += `-- AUTO-CREATE TARGET TABLE\nCREATE TABLE IF NOT EXISTS ${T} (\n`;
+//     sql += c.outputCols.length
+//       ? c.outputCols.map(o => `  ${o.tgt} VARCHAR(255)`).join(",\n")
+//       : "  -- columns inferred at runtime";
+//     sql += "\n);\n\n";
+//     sql += `TRUNCATE TABLE ${T};\n\n`;
+//   }
+
+//   if (c.target.mode === "upsert") {
+//     sql += `-- UPSERT on key: ${c.target.upsertKey || '(key not specified)'}\n`;
+//   }
+
+//   sql += `INSERT INTO ${T}\nSELECT\n${sel}\nFROM\n${fromClause}`;
+
+//   if (whereClause) {
+//     sql += `\nWHERE ${whereClause}`;
+//   }
+
+//   sql += ";";
+
+//   // ---------------------------
+//   // SHOW SQL
+//   // ---------------------------
+//   document.getElementById("sqlBox").textContent = sql;
+//   document.getElementById("sqlCard").style.display = "";
+// }
+
+async function previewSQL() {
+  const input = document.getElementById("stepsFileInput");
+  const file  = input.files[0];
+
+  if (!file && !rawFileContent) {
+    setSt("warn", "⚠ Upload a steps file first.");
+    return;
+  }
+
+  const previewBtn = document.querySelector('button[onclick="previewSQL()"]');
+  if (previewBtn) {
+    previewBtn.disabled    = true;
+    previewBtn.textContent = "⏳ Generating…";
+  }
+
+  setSt("load", "Sending steps file to AI for SQL preview…", true);
+  setP(15);
+
+  try {
+    // Use uploaded file if available, else fall back to rawFileContent blob
+    const fileBlob = file
+      ? file
+      : new Blob([rawFileContent], { type: "text/plain" });
+
+    const formData = new FormData();
+    formData.append("file", fileBlob, file ? file.name : "steps.txt");
+
+    setP(35);
+
+    const resp = await fetch("{% url 'generate_sql_preview' %}", {
+      method:  "POST",
+      headers: { "X-CSRFToken": CSRF },
+      body:    formData,
+    });
+
+    setP(70);
+
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      throw new Error(data.error || `HTTP ${resp.status}`);
+    }
+
+    const sql = (data.sql || "").trim();
+    if (!sql) {
+      throw new Error("AI returned empty SQL. Check your steps file format.");
+    }
+
+    setP(100);
+
+    // ── Show SQL in preview box ──
+    document.getElementById("sqlCard").style.display = "";
+    document.getElementById("sqlBox").textContent    = sql;
+    document.getElementById("sqlCard").scrollIntoView({ behavior: "smooth" });
+
+    setSt("ok", "✓ SQL preview generated — review below before running.");
+    setTimeout(() => setP(0), 900);
+
+  } catch (e) {
+    setSt("err", "✗ Preview failed: " + e.message);
+    setP(0);
+  }
+
+  if (previewBtn) {
+    previewBtn.disabled    = false;
+    previewBtn.textContent = "🔍 Preview SQL";
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════
+   BUILD AI PROMPT
+═══════════════════════════════════════════════════ */
+function buildPrompt(c) {
+  const onClause = c.joins.map(j => `${j.left} = ${j.right}`).join(" AND ");
+  const joinTypes = [...new Set(c.joins.map(j => j.type))].join("/");
+
+  const srcBlock = c.sources.map((s, i) =>
+    `TABLE ${String.fromCharCode(65+i)}: ${s.conn ? s.conn+'.' : ''}${s.table} AS ${s.alias}\n` +
+    `  Columns : ${s.cols}\n` +
+    (s.where ? `  WHERE   : ${s.where}\n` : '')
+  ).join("\n");
+
+  const joinBlock = c.joins.map((j, i) =>
+    `  Condition ${i+1}: ${j.left} = ${j.right}  [${j.type} JOIN]`
+  ).join("\n");
+
+  const ocBlock = c.outputCols.length
+    ? c.outputCols.map(o => `    ${o.src} → ${o.tgt}`).join("\n")
+    : "    all columns (pass-through)";
+
+  let targetOpts = "";
+  if (c.target.mode === "create")    targetOpts = "Strategy : CREATE TABLE IF NOT EXISTS + TRUNCATE + INSERT";
+  if (c.target.mode === "existing")  targetOpts = "Strategy : INSERT into existing table";
+  if (c.target.mode === "upsert")    targetOpts = `Strategy : UPSERT (InsertUpdate) on key(s): ${c.target.upsertKey}`;
+
+  return `Generate Pentaho KTR + KJB for a multi-table ${joinTypes} JOIN (${c.sources.length} source tables).
+
+SOURCE TABLES:
+${srcBlock}
+JOIN CONDITIONS (${c.joins.length}):
+${joinBlock}
+
+TARGET TABLE: ${c.target.conn ? c.target.conn+'.' : ''}${c.target.table}
+  ${targetOpts}
+
+OUTPUT COLUMNS:
+${ocBlock}
+
+KTR STEPS TO GENERATE:
+${c.sources.map(s => `- TableInput: SELECT ${s.cols} FROM ${s.table}${s.where ? ' WHERE '+s.where : ''} (alias: ${s.alias})`).join("\n")}
+${c.sources.length === 2
+  ? `- MergeJoin: ${c.joins[0].type} JOIN ON ${onClause}`
+  : `- MergeJoin x${c.sources.length-1}: chained JOINs → ${onClause}`}
+- SelectValues: map output columns
+${c.target.mode === "upsert"
+  ? `- InsertUpdate: upsert into ${c.target.table} on key ${c.target.upsertKey}`
+  : `- TableOutput: INSERT into ${c.target.table} (commit 100 rows)`}
+
+KJB STEPS: START → ExecuteTransformation(join_transformation.ktr) → SUCCESS
+
+OUTPUT FORMAT:
+##KTR:join_transformation##
+<?xml version="1.0" encoding="UTF-8"?>
+<transformation>...</transformation>
+##END##
+##KJB:job_join##
+<?xml version="1.0" encoding="UTF-8"?>
+<job>...</job>
+##END##`;
+}
+
+/* ═══════════════════════════════════════════════════
+   GENERATE FILES
+═══════════════════════════════════════════════════ */
+async function generateJoin() {
+  if (!parsedConfig) { setSt("warn","⚠ Upload a steps file first."); return; }
+
+  const btn = document.getElementById("genBtn");
+  btn.disabled = true; btn.textContent = "⏳ Generating…";
+  setSt("load","Building KTR + KJB from steps file…", true); setP(20); generatedFiles = {};
+
+  try {
+    const fd = new FormData();
+    fd.append("steps_text", buildPrompt(parsedConfig)); setP(40);
+
+    const resp = await fetch("{% url 'generate_pentaho_files' %}", {
+      method:"POST", headers:{"X-CSRFToken":CSRF}, body:fd
+    });
+    setP(65);
+    if (!resp.ok) {
+      const e = await resp.json().catch(()=>({error:"HTTP "+resp.status}));
+      throw new Error(e.error || "HTTP "+resp.status);
+    }
+
+    const blob = await resp.blob();
+    const zip  = await JSZip.loadAsync(blob);
+    const ktr = [], kjb = [];
+
+    for (const [fn, f] of Object.entries(zip.files)) {
+      const xml  = await f.async("string");
+      const ext  = fn.split(".").pop().toLowerCase();
+      const name = fn.replace(/\.[^/.]+$/, "");
+      (ext === "ktr" ? ktr : kjb).push({ name, type:ext, xml });
+    }
+
+    const all = [...ktr, ...kjb];
+    if (!all.length) throw new Error("No files returned in ZIP.");
+    all.forEach(f => { generatedFiles[f.name] = f; });
+
+    buildFileUI(ktr.length, kjb.length);
+    selectFile(all[0].name);
+    document.getElementById("resultsCard").style.display = "";
+    document.getElementById("execBtn").disabled = false;
+    setP(100);
+    setSt("ok",`✓ Generated ${ktr.length} KTR + ${kjb.length} KJB — ${parsedConfig.joins[0]?.type||'INNER'} JOIN (${parsedConfig.sources.length} tables) → ${parsedConfig.target.table}. Click ▶ Run Pipeline.`);
+    setTimeout(() => setP(0), 900);
+    document.getElementById("resultsCard").scrollIntoView({behavior:"smooth"});
+    // === AUTO DOWNLOAD ===
+    const autoDownload = localStorage.getItem("pref_auto_download") !== "false"; // default true
+    if (autoDownload) {
+        downloadAll()
+        toast('pentaho_files.zip downloaded!', 'ok');
+    } else {
+        toast('Auto-download is disabled', 'info');
+    }
+  } catch(e) {
+    setSt("err","✗ "+e.message); setP(0);
+  }
+
+  btn.disabled = false; btn.textContent = "⚡ Generate Files";
+}
+
+/* ═══════════════════════════════════════════════════
+   EXECUTE PIPELINE
+═══════════════════════════════════════════════════ */
+async function executeJoin() {
+  if (!parsedConfig || !rawFileContent) {
+    setSt("warn", "⚠ Upload a steps file first.");
+    return;
+  }
+
+  const c       = parsedConfig;
+  const T       = c.target.table;
+  const execBtn = document.getElementById("execBtn");
+  const sqlBox  = document.getElementById("sqlBox");
+
+  // ── Reset + start UI ──────────────────────────────────────────────────────
+  execBtn.disabled    = true;
+  execBtn.textContent = "⏳ Running…";
+  setSt("load", "Sending steps file to AI…", true);
+  setP(10);
+  generatedFiles = {};
+
+  // ── Exec log panel ────────────────────────────────────────────────────────
+  const panel = document.getElementById("execPanel");
+  const log   = document.getElementById("execLog");
+  panel.classList.add("show");
+  panel.scrollIntoView({ behavior: "smooth" });
+  log.innerHTML = "";
+
+  const L = (msg, type = "info") => {
+    const d = document.createElement("div");
+    d.className = "log-" + type;
+    d.innerHTML = `<span>⏱ ${new Date().toLocaleTimeString()}</span> — ${msg}`;
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
+  };
+
+  L("🚀 Pipeline started", "info");
+  L(`📂 Source Tables: ${c.sources.map(s => s.table).join(", ")}`, "info");
+  L(`🔗 Join Type: ${c.joins.map(j => j.type).join(", ")}`, "info");
+  L(`🎯 Target Table: ${T}`, "info");
+
+  let sql = "";
+
+  // ── STEP 1 : Generate SQL via AI ──────────────────────────────────────────
+  try {
+    L("🤖 Sending steps file to AI for SQL generation…", "info");
+    setSt("load", "AI is generating SQL…", true);
+    setP(25);
+
+    const fileBlob = new Blob([rawFileContent], { type: "text/plain" });
+    const formData = new FormData();
+    formData.append("file", fileBlob, "steps.txt");
+
+    const genResp = await fetch("{% url 'generate_sql_preview' %}", {
+      method:  "POST",
+      headers: { "X-CSRFToken": CSRF },
+      body:    formData,
+    });
+
+    setP(55);
+
+    const genData = await genResp.json();
+
+    if (!genResp.ok) {
+      throw new Error(genData.error || `SQL generation failed (HTTP ${genResp.status})`);
+    }
+
+    sql = (genData.sql || "").trim();
+
+    if (!sql) {
+      throw new Error("AI returned empty SQL. Check your steps file format.");
+    }
+
+    setP(65);
+    L("✅ SQL generated successfully", "ok");
+    setSt("load", "SQL ready — executing on database…", true);
+
+    // Show SQL in preview box
+    // document.getElementById("sqlCard").style.display = "";
+    sqlBox.textContent = sql;
+
+  } catch (e) {
+    L("❌ SQL generation error: " + e.message, "err");
+    setSt("err", "✗ SQL generation failed: " + e.message);
+    setP(0);
+    execBtn.disabled    = false;
+    execBtn.textContent = "▶ Run Pipeline";
+    return;
+  }
+
+  // ── STEP 2 : Execute generated SQL ────────────────────────────────────────
+  try {
+    L("⚙ Sending SQL to server for execution…", "info");
+    setP(75);
+
+    const execResp = await fetch("{% url 'table_builder_execute_sql' %}", {
+      method:  "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken":  CSRF,
+      },
+      body: JSON.stringify({ sql }),
+    });
+
+    setP(90);
+
+    const execData = await execResp.json();
+
+    if (!execResp.ok) {
+      throw new Error(execData.error || `Execution failed (HTTP ${execResp.status})`);
+    }
+
+    L("🛠 Executing SQL statements…", "info");
+    setP(100);
+
+    setTimeout(() => {
+      L("✅ SQL executed successfully", "ok");
+      L(`🎯 Data inserted into ${T}`, "ok");
+      L("🏁 Pipeline completed successfully", "ok");
+      setSt("ok", `✓ Pipeline completed — data loaded into ${T}`);
+      setP(0);
+    }, 600);
+
+  } catch (e) {
+    L("❌ Execution error: " + e.message, "err");
+    setSt("err", "✗ Execution failed: " + e.message);
+    setP(0);
+  }
+
+  execBtn.disabled    = false;
+  execBtn.textContent = "▶ Run Pipeline";
+}
+
+/* ═══════════════════════════════════════════════════
+   FILE UI (results)
+═══════════════════════════════════════════════════ */
+function buildFileUI(ktrLen, kjbLen) {
+  document.getElementById("ktrCount").textContent   = ktrLen;
+  document.getElementById("kjbCount").textContent   = kjbLen;
+  document.getElementById("totalCount").textContent = ktrLen+kjbLen;
+  document.getElementById("dlAllBtn").disabled = false;
+  document.getElementById("dlOneBtn").disabled = false;
+  const fl=document.getElementById("fileList"); fl.innerHTML="";
+  const xt=document.getElementById("xmlTabs");  xt.innerHTML="";
+  Object.values(generatedFiles).forEach(f => {
+    const row=document.createElement("div");
+    row.className="file-row"; row.id="row-"+f.name;
+    row.innerHTML=`<span class="badge ${f.type}">${f.type.toUpperCase()}</span><span class="file-row-name">${f.name}.${f.type}</span><span style="font-size:11px;color:var(--muted)">${f.xml.split("\n").length} lines</span>`;
+    row.onclick=()=>selectFile(f.name); fl.appendChild(row);
+    const t=document.createElement("button"); t.className="tab "+f.type; t.id="tab-"+f.name;
+    t.textContent=f.name+"."+f.type; t.onclick=()=>selectFile(f.name); xt.appendChild(t);
+  });
+}
+
+function selectFile(name) {
+  activeFile=name; const f=generatedFiles[name];
+  document.getElementById("xmlArea").value = f?f.xml:"";
+  document.querySelectorAll(".tab").forEach(t => t.className="tab "+(f?f.type:"")+(t.id==="tab-"+name?" active":""));
+  document.querySelectorAll(".file-row").forEach(r => r.classList.toggle("active",r.id==="row-"+name));
+}
+
+function downloadCurrent() { if(!activeFile)return; const f=generatedFiles[activeFile]; dl(f.xml,f.name+"."+f.type,"application/xml"); }
+async function downloadAll() {
+  const files=Object.values(generatedFiles); if(!files.length)return;
+  const zip=new JSZip(); files.forEach(f=>zip.file(f.name+"."+f.type,f.xml));
+  dl(await zip.generateAsync({type:"blob"}),"join_files.zip","application/zip");
+}
+function dl(content,fname,mime){const b=content instanceof Blob?content:new Blob([content],{type:mime});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=fname;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);}
+function cpXml(){const v=document.getElementById("xmlArea").value;if(!v)return;navigator.clipboard.writeText(v).then(()=>setSt("ok","✓ XML copied."));}
+
+/* ═══════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════ */
+function clearAll() {
+  parsedConfig=null; generatedFiles={}; activeFile=null;
+  document.getElementById("stepsFileInput").value="";
+  document.getElementById("fileStrip").style.display="none";
+  document.getElementById("parsedCard").style.display="none";
+  document.getElementById("resultsCard").style.display="none";
+  document.getElementById("execPanel").classList.remove("show");
+  document.getElementById("sqlCard").style.display="none";
+  document.getElementById("execBtn").disabled=true;
+  hideParseError();
+  setSt("idle","Upload a steps file to begin.");
+}
+
+function showParseError(msg) {
+  const el=document.getElementById("parseError");
+  el.textContent="⚠ Parse error: "+msg;
+  el.classList.add("show");
+}
+function hideParseError() { document.getElementById("parseError").classList.remove("show"); }
+
+function setSt(type,msg,spin=false){
+  const b=document.getElementById("statusBar");
+  b.className="status s-"+type;
+  b.innerHTML=(spin?'<span class="spinner"></span>':"")+"<span>"+msg+"</span>";
+}
+function setP(p){document.getElementById("progressBar").style.width=p+"%";}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+</script>
+</body>
+</html>

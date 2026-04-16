@@ -1,0 +1,932 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SQLite Console — AI Pentaho</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f14;--surface:#151820;--surface2:#1c2030;--border:#2a2f3d;
+  --accent:#4f46e5;--info:#38bdf8;--success:#22c55e;--error:#ef4444;
+  --warn:#f59e0b;--text:#e8eaf0;--muted:#6b7280;
+  --sans:'Inter',sans-serif;--mono:'Courier New',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+*{scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+*::-webkit-scrollbar{width:3px;height:3px}
+*::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+.shell{display:flex;min-height:100vh}
+.main{flex:1;padding:2rem 2rem 3rem;overflow-y:auto;height:100vh}
+@media(max-width:800px){.main{padding:1.25rem;height:auto}}
+
+/* ── Topbar ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px}
+.topbar-left h1{font-size:20px;font-weight:600}
+.topbar-left p{font-size:13px;color:var(--muted);margin-top:2px}
+.tb-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;text-decoration:none;font-family:var(--sans)}
+.tb-btn:hover{border-color:var(--accent);color:#a5b4fc}
+
+/* ── Panel ── */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.3rem;margin-bottom:1.25rem}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px}
+.panel-title{font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
+
+/* ── Table pills ── */
+.table-list{display:flex;flex-wrap:wrap;gap:8px}
+.table-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.22);color:#7dd3fc;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;position:relative}
+.table-pill:hover{background:rgba(56,189,248,.18);border-color:var(--info);color:#bae6fd;transform:translateY(-1px)}
+.table-pill.active{background:rgba(56,189,248,.28);border-color:var(--info);color:#fff}
+.table-pill-dot{width:6px;height:6px;border-radius:50%;background:var(--info)}
+
+/* ── Table DDL actions (per pill) ── */
+.pill-actions{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.table-pill:hover .pill-actions{display:block}
+.pill-action{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;color:var(--muted)}
+.pill-action:hover{background:var(--surface2);color:var(--text)}
+.pill-action.red:hover{color:#fca5a5;background:rgba(239,68,68,.08)}
+.pill-action.amber:hover{color:#fbbf24;background:rgba(245,158,11,.08)}
+
+/* ── Query editor ── */
+.query-area{width:100%;min-height:130px;max-height:280px;resize:vertical;background:#080a10;border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;font-family:var(--mono);font-size:13px;color:#dde3ed;line-height:1.7;outline:none;transition:border-color .15s}
+.query-area:focus{border-color:rgba(79,70,229,.5);box-shadow:0 0 0 3px rgba(79,70,229,.08)}
+.actions-bar{display:flex;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:8px}
+.actions-left{display:flex;align-items:center;gap:8px}
+.hint{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.kbd{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:var(--mono);font-size:10px;color:#a5b4fc}
+.exec-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 22px;border-radius:9px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s;font-family:var(--sans)}
+.exec-btn:hover{background:#3b3fd5;transform:translateY(-1px);box-shadow:0 4px 14px rgba(79,70,229,.35)}
+.clear-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:9px;background:var(--surface2);color:var(--muted);font-size:13px;border:1px solid var(--border);cursor:pointer;transition:all .15s;font-family:var(--sans)}
+.clear-btn:hover{border-color:rgba(239,68,68,.4);color:#fca5a5}
+.error-box{display:flex;gap:12px;align-items:flex-start;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:9px;padding:12px 16px;margin-top:14px;font-size:13px;color:#fca5a5;font-family:var(--mono);line-height:1.65}
+
+/* ── CRUD toolbar ── */
+.crud-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cbt{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;font-size:11px;font-weight:600;border:1px solid;cursor:pointer;transition:all .15s;font-family:var(--sans);white-space:nowrap}
+.cbt:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.cbt-blue  {color:#7dd3fc;border-color:rgba(56,189,248,.35);background:rgba(56,189,248,.08)}
+.cbt-green {color:#86efac;border-color:rgba(34,197,94,.35); background:rgba(34,197,94,.08)}
+.cbt-purple{color:#c4b5fd;border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.08)}
+.cbt-amber {color:#fbbf24;border-color:rgba(245,158,11,.35); background:rgba(245,158,11,.08)}
+.cbt-red   {color:#fca5a5;border-color:rgba(239,68,68,.35);  background:rgba(239,68,68,.08)}
+.cbt-save  {color:#86efac;border-color:rgba(34,197,94,.5);   background:rgba(34,197,94,.12);display:none}
+.cbt-save.on{display:inline-flex}
+
+/* ── Meta chips ── */
+.results-meta{display:flex;align-items:center;gap:7px;margin-bottom:10px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.ch-green {background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.25); color:#86efac}
+.ch-blue  {background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);color:#7dd3fc}
+.ch-amber {background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:#fbbf24}
+.ch-purple{background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);color:#c4b5fd}
+.ch-red   {background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.25); color:#fca5a5}
+
+/* ── Edit hint ── */
+.edit-hint{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:rgba(79,70,229,.07);border:1px solid rgba(79,70,229,.2);border-radius:8px;padding:7px 12px;margin-bottom:10px;font-size:11px;color:#a5b4fc;line-height:1.9}
+
+/* ── Data table ── */
+.table-wrap{overflow-x:auto;border-radius:9px;border:1px solid var(--border)}
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table thead tr{background:var(--surface2)}
+.data-table th{text-align:left;padding:9px 13px;color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--surface2);user-select:none}
+.data-table th.new-col{color:#c4b5fd!important;background:rgba(167,139,250,.1)!important}
+.data-table th.add-col-th{cursor:pointer;text-align:center;padding:9px 12px!important;color:rgba(167,139,250,.4)!important;font-size:18px!important;font-weight:300!important;letter-spacing:0!important;transition:all .15s;border-left:1px dashed rgba(167,139,250,.2)}
+.data-table th.add-col-th:hover{color:#c4b5fd!important;background:rgba(167,139,250,.1)!important}
+.data-table td{padding:8px 13px;border-bottom:1px solid rgba(42,47,61,.5);color:var(--text);font-family:var(--mono);font-size:12px;white-space:nowrap;min-width:80px;transition:background .1s}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:rgba(79,70,229,.04)}
+.data-table td[contenteditable="true"]{cursor:text;outline:none}
+.data-table td[contenteditable="true"]:focus{background:rgba(79,70,229,.12)!important;box-shadow:inset 0 0 0 1px rgba(79,70,229,.5)}
+.data-table td.dirty{background:rgba(245,158,11,.07)!important;box-shadow:inset 0 -2px 0 rgba(245,158,11,.5);color:#fde68a}
+.data-table td.new-cell{background:rgba(167,139,250,.05)!important}
+.data-table td.new-cell:focus{background:rgba(167,139,250,.14)!important;box-shadow:inset 0 0 0 1px rgba(167,139,250,.5)}
+.null-val{color:var(--muted);font-style:italic;font-size:11px}
+.new-row td{background:rgba(34,197,94,.04)!important;border-bottom:1px dashed rgba(34,197,94,.2)!important}
+.new-row td[contenteditable="true"]:focus{background:rgba(34,197,94,.1)!important;box-shadow:inset 0 0 0 1px rgba(34,197,94,.4)}
+
+/* ── Row actions ── */
+.row-num-cell{user-select:none}
+.row-num-wrap{display:flex;align-items:center;gap:4px}
+.row-num{color:var(--muted);font-size:11px}
+.del-row-btn{display:none;align-items:center;justify-content:center;width:17px;height:17px;border-radius:4px;border:none;background:rgba(239,68,68,.15);color:#fca5a5;font-size:10px;cursor:pointer;transition:all .15s;padding:0;flex-shrink:0}
+tr:hover .del-row-btn,.new-row .del-row-btn{display:inline-flex}
+.del-row-btn:hover{background:rgba(239,68,68,.35)}
+
+.row-counter{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--muted)}
+.row-counter strong{color:var(--text)}
+
+/* ── Empty ── */
+.empty-state{text-align:center;padding:2.5rem 1rem;color:var(--muted)}
+.empty-icon{font-size:32px;margin-bottom:.65rem}
+.empty-text{font-size:14px;font-weight:500;color:#4b5563;margin-bottom:.25rem}
+.empty-sub{font-size:12px}
+
+/* ── Loading ── */
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(13,15,20,.65);backdrop-filter:blur(2px);z-index:9998;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.loading-overlay.show{display:flex}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--muted)}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:13px;padding:10px 16px;border-radius:8px;z-index:9999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;max-width:320px}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.ok  {border-color:rgba(34,197,94,.4); color:#86efac}
+.toast.err {border-color:rgba(239,68,68,.4); color:#fca5a5}
+.toast.warn{border-color:rgba(245,158,11,.4);color:#fbbf24}
+
+/* ── Modal ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(13,15,20,.82);z-index:10000;align-items:center;justify-content:center;padding:1rem}
+.modal-bg.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem;width:500px;max-width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.modal p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:1rem}
+.modal-field{margin-bottom:12px}
+.modal-field label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.modal-input,.modal-select{width:100%;padding:9px 12px;background:#080a10;border:1px solid var(--border);border-radius:8px;font-family:var(--mono);font-size:13px;color:var(--text);outline:none}
+.modal-select{font-family:var(--sans);cursor:pointer}
+.modal-input:focus,.modal-select:focus{border-color:rgba(79,70,229,.5);box-shadow:0 0 0 3px rgba(79,70,229,.08)}
+.modal-sql{background:#080a10;border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-family:var(--mono);font-size:11px;line-height:1.8;margin-bottom:1rem;max-height:220px;overflow-y:auto;white-space:pre-wrap;word-break:break-word}
+.modal-sql.green{color:#86efac}
+.modal-sql.red  {color:#fca5a5;border-color:rgba(239,68,68,.25)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem}
+.modal-cancel{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:13px;cursor:pointer;font-family:var(--sans)}
+.modal-cancel:hover{color:var(--text)}
+.modal-ok{padding:8px 20px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);color:#fff}
+.modal-ok.accent{background:var(--accent)}
+.modal-ok.green {background:var(--success)}
+.modal-ok.red   {background:var(--error)}
+.modal-ok.purple{background:#7c3aed}
+.modal-ok.amber {background:#b45309}
+.modal-ok:hover {filter:brightness(1.1)}
+
+/* ── Warning banner ── */
+.danger-banner{display:flex;align-items:center;gap:8px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#fca5a5}
+
+/* ── DDL section ── */
+.ddl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:.5rem}
+.ddl-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:all .15s}
+.ddl-card:hover{transform:translateY(-2px)}
+.ddl-card.red:hover  {border-color:rgba(239,68,68,.5); background:rgba(239,68,68,.07)}
+.ddl-card.amber:hover{border-color:rgba(245,158,11,.5);background:rgba(245,158,11,.07)}
+.ddl-card.purple:hover{border-color:rgba(167,139,250,.5);background:rgba(167,139,250,.07)}
+.ddl-card.blue:hover {border-color:rgba(56,189,248,.5);background:rgba(56,189,248,.07)}
+.ddl-icon{font-size:20px;margin-bottom:6px}
+.ddl-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
+.ddl-desc{font-size:11px;color:var(--muted);line-height:1.5}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div id="sidebar1">
+    {% include 'components/sidebar.html' %}
+  </div>
+
+  <div id="sidebar2">
+    {% include 'components/sidebar_Talend.html' %}
+  </div>
+
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>🗃 SQLite Console</h1>
+        <p>Full CRUD + DDL operations on your database</p>
+      </div>
+      <div>
+        <a class="tb-btn" href="/dashboard/">← Dashboard</a>
+      </div>
+    </div>
+
+    <!-- Tables Panel -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">📋 Tables <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:4px">— click to load, hover for options</span></span>
+        <span style="font-size:12px;color:var(--muted)">{{ tables|length }} table{{ tables|length|pluralize }}</span>
+      </div>
+      <div class="table-list">
+        {% for table in tables %}
+        <div class="table-pill {% if active_table == table %}active{% endif %}" onclick="loadTable('{{ table }}')">
+          <span class="table-pill-dot"></span>{{ table }}
+          <!-- <div class="pill-actions" onclick="event.stopPropagation()">
+            <div class="pill-action" onclick="loadTable('{{ table }}')">📄 View Data</div>
+            <div class="pill-action amber" onclick="openTruncate('{{ table }}')">🧹 Truncate</div>
+            <div class="pill-action red"   onclick="openDrop('{{ table }}')">🗑 Drop Table</div>
+          </div> -->
+        </div>
+        {% empty %}
+          <span style="font-size:13px;color:var(--muted)">No tables found.</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- DDL Operations Panel -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">⚙️ Table Operations</span>
+        <span style="font-size:11px;color:var(--muted)">Select a table first by clicking it above</span>
+      </div>
+      <div class="ddl-grid">
+        <div class="ddl-card blue" onclick="openAddColModal()">
+          <div class="ddl-icon">➕</div>
+          <div class="ddl-title">Add Column</div>
+          <div class="ddl-desc">ALTER TABLE — add a new column with type and default</div>
+        </div>
+        <div class="ddl-card purple" onclick="openDropColModal()">
+          <div class="ddl-icon">➖</div>
+          <div class="ddl-title">Drop Column</div>
+          <div class="ddl-desc">ALTER TABLE — remove an existing column permanently</div>
+        </div>
+        <div class="ddl-card amber" onclick="openRenameColModal()">
+          <div class="ddl-icon">✏️</div>
+          <div class="ddl-title">Rename Column</div>
+          <div class="ddl-desc">ALTER TABLE — rename an existing column</div>
+        </div>
+        <div class="ddl-card amber" onclick="openTruncate(getTableName())">
+          <div class="ddl-icon">🧹</div>
+          <div class="ddl-title">Truncate Table</div>
+          <div class="ddl-desc">DELETE all rows — keeps table structure intact</div>
+        </div>
+        <div class="ddl-card red" onclick="openDrop(getTableName())">
+          <div class="ddl-icon">💥</div>
+          <div class="ddl-title">Drop Table</div>
+          <div class="ddl-desc">DROP TABLE — permanently removes the whole table</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Query Editor -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">⌨️ Query Editor</span>
+        <span class="hint"><span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> to run</span>
+      </div>
+      <form method="post" id="queryForm">
+        {% csrf_token %}
+        <input type="hidden" name="active_table" id="activeTableInput" value="{{ active_table }}">
+        <textarea id="query" name="query" class="query-area" placeholder="SELECT * FROM your_table LIMIT 100;" spellcheck="false">{{ query }}</textarea>
+        <div class="actions-bar">
+          <div class="actions-left">
+            <button type="button" class="clear-btn" onclick="clearQuery()">✕ Clear</button>
+            <span class="hint"><span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> execute</span>
+          </div>
+          <button type="submit" class="exec-btn">▶ Execute</button>
+        </div>
+      </form>
+      {% if error %}
+      <div class="error-box"><span style="font-size:16px;flex-shrink:0;margin-top:1px">⚠</span><div>{{ error }}</div></div>
+      {% endif %}
+    </div>
+
+    <!-- Results Panel -->
+    {% if rows %}
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">📊 Results — <span style="color:var(--muted);font-weight:400;font-size:13px" >{{ active_table }}</span></span>
+        <div class="crud-bar">
+          <button class="cbt cbt-green"  onclick="addNewRow()">＋ Add Row</button>
+          <button class="cbt cbt-blue"   onclick="openAddColModal()">＋ Add Column</button>
+          <button class="cbt cbt-purple" onclick="openDropColModal()">− Drop Column</button>
+          <button class="cbt cbt-amber"  onclick="copyTable()">📋 CSV</button>
+          <button class="cbt cbt-save" id="saveBtn" onclick="confirmSave()">💾 Save Changes</button>
+        </div>
+      </div>
+
+      <div class="edit-hint">
+        ✏️ <strong style="color:#86efac">Click cell</strong> to edit inline &nbsp;|&nbsp;
+        <strong style="color:#86efac">＋ Add Row</strong> new record &nbsp;|&nbsp;
+        <strong style="color:#c4b5fd">＋ Add Column</strong> new column &nbsp;|&nbsp;
+        <strong style="color:#fca5a5">✕</strong> row to delete &nbsp;|&nbsp;
+        <strong style="color:#86efac">💾 Save Changes</strong> to commit all
+      </div>
+
+      <div class="results-meta">
+        <span class="chip ch-green">✓ {{ rows|length }} row{{ rows|length|pluralize }}</span>
+        <span class="chip ch-blue" id="colCountChip">{{ columns|length }} col{{ columns|length|pluralize }}</span>
+        <span class="chip ch-amber"  id="dirtyChip"  style="display:none">0 edits</span>
+        <span class="chip ch-green"  id="newRowChip" style="display:none">0 new rows</span>
+        <span class="chip ch-purple" id="newColChip" style="display:none">0 new cols</span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table" id="dataTable">
+          <thead>
+            <tr id="headerRow">
+              <th style="color:#4b5563;width:52px">#</th>
+              {% for col in columns %}
+                <th data-col="{{ forloop.counter0 }}">{{ col }}</th>
+              {% endfor %}
+              <th class="add-col-th" onclick="openAddColModal()" title="Add column">＋</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            {% for row in rows %}
+            <tr data-row="{{ forloop.counter0 }}">
+              <td class="row-num-cell">
+                <div class="row-num-wrap">
+                  <span class="row-num">{{ forloop.counter }}</span>
+                  <button class="del-row-btn" onclick="deleteExistingRow(this)" title="Delete row">✕</button>
+                </div>
+              </td>
+              {% for cell in row %}
+              <td contenteditable="true"
+                  data-original="{% if cell is None or cell == '' %}{% else %}{{ cell }}{% endif %}"
+                  data-col="{{ forloop.counter0 }}"
+                  onclick="focusCell(this)"
+                  oninput="markDirty(this)">{% if cell is None or cell == "" %}<span class="null-val">NULL</span>{% else %}{{ cell }}{% endif %}</td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="row-counter">Showing <strong id="totalRows">{{ rows|length }}</strong> row{{ rows|length|pluralize }}{% if rows|length == 100 %} — <span style="color:var(--warn)">⚠ 100-row limit</span>{% endif %}</div>
+    </div>
+
+    {% elif query and not error %}
+    <div class="panel">
+      <div class="panel-head"><span class="panel-title">📊 Results</span></div>
+      <div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">Query executed successfully</div><div class="empty-sub">No rows returned</div></div>
+    </div>
+    {% else %}
+    <div class="panel" style="border-style:dashed;border-color:rgba(42,47,61,.7)">
+      <div class="empty-state"><div class="empty-icon">🗃</div><div class="empty-text">Results will appear here</div><div class="empty-sub">Click a table above or write a SQL query and press Execute</div></div>
+    </div>
+    {% endif %}
+
+  </main>
+</div>
+
+<!-- ══════════════ LOADING ══════════════ -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Running…</div>
+</div>
+
+<!-- ══════════════ MODALS ══════════════ -->
+
+<!-- Confirm Save -->
+<div class="modal-bg" id="saveModal">
+  <div class="modal">
+    <h3>💾 Confirm Save</h3>
+    <p>Review all pending SQL before committing. This cannot be undone.</p>
+    <div class="modal-sql green" id="saveSQLBox"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('saveModal')">Cancel</button>
+      <button class="modal-ok green" onclick="executeSave()">✓ Run &amp; Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Row -->
+<div class="modal-bg" id="deleteRowModal">
+  <div class="modal">
+    <h3>🗑 Delete Row</h3>
+    <p>This will permanently delete the selected row from the database.</p>
+    <div class="modal-sql red" id="deleteRowSQL"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('deleteRowModal')">Cancel</button>
+      <button class="modal-ok red" onclick="executeDeleteRow()">Delete Row</button>
+    </div>
+  </div>
+</div>
+
+<!-- Truncate -->
+<div class="modal-bg" id="truncateModal">
+  <div class="modal">
+    <h3>🧹 Truncate Table</h3>
+    <div class="danger-banner">⚠ This deletes ALL rows. The table structure is kept.</div>
+    <p>Type the table name to confirm:</p>
+    <div class="modal-field">
+      <input class="modal-input" id="truncateConfirmInput" placeholder="Type table name here…"/>
+    </div>
+    <div class="modal-sql red" id="truncateSQL"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('truncateModal')">Cancel</button>
+      <button class="modal-ok amber" onclick="executeTruncate()">🧹 Truncate</button>
+    </div>
+  </div>
+</div>
+
+<!-- Drop Table -->
+<div class="modal-bg" id="dropModal">
+  <div class="modal">
+    <h3>💥 Drop Table</h3>
+    <div class="danger-banner">⚠ IRREVERSIBLE — drops the entire table including all data and schema.</div>
+    <p>Type the table name to confirm:</p>
+    <div class="modal-field">
+      <input class="modal-input" id="dropConfirmInput" placeholder="Type table name here…"/>
+    </div>
+    <div class="modal-sql red" id="dropSQL"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('dropModal')">Cancel</button>
+      <button class="modal-ok red" onclick="executeDrop()">💥 Drop Table</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Column -->
+<div class="modal-bg" id="addColModal">
+  <div class="modal">
+    <h3>➕ Add New Column</h3>
+    <p>Runs <code style="color:#a5b4fc;font-size:12px">ALTER TABLE … ADD COLUMN</code> on your database.</p>
+    <div class="modal-field">
+      <label>Column Name</label>
+      <input class="modal-input" id="newColName" placeholder="e.g. phone_number"/>
+    </div>
+    <div class="modal-field">
+      <label>Data Type</label>
+      <select class="modal-select" id="newColType">
+        <option value="TEXT">TEXT</option>
+        <option value="INTEGER">INTEGER</option>
+        <option value="REAL">REAL</option>
+        <option value="NUMERIC">NUMERIC</option>
+        <option value="BLOB">BLOB</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Default Value <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+      <input class="modal-input" id="newColDefault" placeholder="Leave blank for NULL"/>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('addColModal')">Cancel</button>
+      <button class="modal-ok purple" onclick="executeAddColumn()">➕ Add Column</button>
+    </div>
+  </div>
+</div>
+
+<!-- Drop Column -->
+<div class="modal-bg" id="dropColModal">
+  <div class="modal">
+    <h3>➖ Drop Column</h3>
+    <div class="danger-banner">⚠ Dropping a column permanently removes all its data.</div>
+    <div class="modal-field">
+      <label>Select Column to Drop</label>
+      <select class="modal-select" id="dropColSelect"></select>
+    </div>
+    <div class="modal-sql red" id="dropColSQL" style="margin-top:10px"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('dropColModal')">Cancel</button>
+      <button class="modal-ok red" onclick="executeDropColumn()">➖ Drop Column</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename Column -->
+<div class="modal-bg" id="renameColModal">
+  <div class="modal">
+    <h3>✏️ Rename Column</h3>
+    <div class="modal-field">
+      <label>Select Column</label>
+      <select class="modal-select" id="renameColSelect" onchange="updateRenameSQL()"></select>
+    </div>
+    <div class="modal-field">
+      <label>New Name</label>
+      <input class="modal-input" id="renameColNew" placeholder="new_column_name" oninput="updateRenameSQL()"/>
+    </div>
+    <div class="modal-sql green" id="renameColSQL" style="margin-top:10px"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('renameColModal')">Cancel</button>
+      <button class="modal-ok amber" onclick="executeRenameColumn()">✏️ Rename</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════
+   CONFIG
+════════════════════════════════════════ */
+const pkCol = 0; // index of primary key column (0 = first)
+
+/* ════════════════════════════════════════
+   STATE
+════════════════════════════════════════ */
+let dirtyRows    = {};  // {rowIdx: {colIdx: newVal}}
+let newRows      = [];  // [{idx, data:{col:val}}]
+let newColumns   = [];  // [{name,type,defVal,sql,colIdx}]
+let deleteTarget = null;
+let truncateTarget = null;
+let dropTarget   = null;
+let pendingSQL   = [];
+let newRowCounter= 0;
+
+/* ════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════ */
+function getTableName(){
+  return (document.getElementById('query').value.match(/FROM\s+(\w+)/i)||[])[1]
+      || document.getElementById('activeTableInput').value || null;
+}
+function getHeaders(){
+  return Array.from(document.querySelectorAll('#dataTable thead th'))
+    .slice(1).filter(th=>!th.classList.contains('add-col-th'))
+    .map(th=>th.innerText.trim());
+}
+function esc(v){ return v.replace(/'/g,"''"); }
+function placeCaretAtEnd(el){
+  el.focus();const r=document.createRange();r.selectNodeContents(el);r.collapse(false);
+  const s=window.getSelection();s.removeAllRanges();s.addRange(r);
+}
+function focusCell(cell){
+  const ns=cell.querySelector('.null-val');
+  if(ns){ns.remove();cell.dataset.original='';placeCaretAtEnd(cell);}
+}
+
+/* ════════════════════════════════════════
+   TABLE PILL → AUTO LOAD
+════════════════════════════════════════ */
+function loadTable(name){
+  document.querySelectorAll('.table-pill').forEach(p=>p.classList.remove('active'));
+  const pill=event.currentTarget;
+  if(pill.classList.contains('table-pill')) pill.classList.add('active');
+  document.getElementById('query').value='SELECT * FROM '+name+' LIMIT 100;';
+  document.getElementById('activeTableInput').value=name;
+  showLoading('Loading '+name+'…');
+  document.getElementById('queryForm').submit();
+}
+
+/* ════════════════════════════════════════
+   QUERY EDITOR
+════════════════════════════════════════ */
+function clearQuery(){document.getElementById('query').value='';document.getElementById('query').focus();}
+document.getElementById('query').addEventListener('keydown',function(e){
+  if(e.ctrlKey&&e.key==='Enter'){e.preventDefault();showLoading('Running query…');document.getElementById('queryForm').submit();}
+});
+document.getElementById('queryForm').addEventListener('submit',()=>showLoading('Running query…'));
+
+/* ════════════════════════════════════════
+   EDIT EXISTING CELL
+════════════════════════════════════════ */
+function markDirty(cell){
+  const tr=cell.closest('tr');
+  if(tr.classList.contains('new-row'))return;
+  const row=tr.dataset.row,col=cell.dataset.col;
+  if(!dirtyRows[row])dirtyRows[row]={};
+  dirtyRows[row][col]=cell.innerText.trim();
+  cell.classList.add('dirty');
+  updateSaveUI();
+}
+
+/* ════════════════════════════════════════
+   ADD ROW
+════════════════════════════════════════ */
+function addNewRow(){
+  const tbody=document.getElementById('tbody');
+  const headers=getHeaders();
+  const tr=document.createElement('tr');
+  tr.classList.add('new-row');
+  tr.dataset.newIdx=newRowCounter;
+
+  // # cell
+  const numTd=document.createElement('td');
+  numTd.className='row-num-cell';
+  numTd.innerHTML='<div class="row-num-wrap"><span style="color:#86efac;font-size:10px;font-style:italic">NEW</span><button class="del-row-btn" style="display:inline-flex" onclick="removeNewRow(this)">✕</button></div>';
+  tr.appendChild(numTd);
+
+  headers.forEach((col,i)=>{
+    const td=document.createElement('td');
+    td.contentEditable='true';
+    td.dataset.col=i;td.dataset.header=col;
+    td.style.minWidth='100px';
+    if(i>=headers.length-newColumns.length)td.classList.add('new-cell');
+    td.oninput=()=>updateNewRowData(tr);
+    tr.appendChild(td);
+  });
+  // placeholder for add-col column
+  tr.appendChild(document.createElement('td'));
+  tbody.appendChild(tr);
+  newRows.push({idx:newRowCounter,data:{}});
+  newRowCounter++;
+  updateSaveUI();updateNewRowChip();
+  tr.querySelectorAll('td[contenteditable]')[0]?.focus();
+}
+function updateNewRowData(tr){
+  const idx=parseInt(tr.dataset.newIdx);
+  const entry=newRows.find(r=>r.idx===idx);if(!entry)return;
+  tr.querySelectorAll('td[contenteditable]').forEach(td=>{if(td.dataset.header)entry.data[td.dataset.header]=td.innerText.trim();});
+  updateSaveUI();
+}
+function removeNewRow(btn){
+  const tr=btn.closest('tr');const idx=parseInt(tr.dataset.newIdx);
+  newRows=newRows.filter(r=>r.idx!==idx);tr.remove();
+  updateSaveUI();updateNewRowChip();
+}
+
+/* ════════════════════════════════════════
+   DELETE ROW
+════════════════════════════════════════ */
+function deleteExistingRow(btn){
+  const tr=btn.closest('tr');
+  const tableName=getTableName();
+  const headers=getHeaders();
+  const cells=Array.from(tr.querySelectorAll('td')).slice(1);
+  const pkName=headers[pkCol];
+  const pkVal=cells[pkCol]?(cells[pkCol].dataset.original||cells[pkCol].innerText.trim()):'';
+  if(!pkVal||!tableName){toast('No PK value — check pkCol config','err');return;}
+  const sql=`DELETE FROM ${tableName} WHERE ${pkName} = '${esc(pkVal)}';`;
+  deleteTarget={sql,tr};
+  document.getElementById('deleteRowSQL').textContent=sql;
+  openModal('deleteRowModal');
+}
+function executeDeleteRow(){
+  closeModal('deleteRowModal');
+  if(!deleteTarget)return;
+  runSQL(deleteTarget.sql,'Deleting row…');
+}
+
+/* ════════════════════════════════════════
+   TRUNCATE TABLE
+════════════════════════════════════════ */
+function openTruncate(name){
+  if(!name){toast('Load a table first','warn');return;}
+  truncateTarget=name;
+  document.getElementById('truncateSQL').textContent=`DELETE FROM ${name};\n-- (SQLite uses DELETE for truncate)`;
+  document.getElementById('truncateConfirmInput').value='';
+  openModal('truncateModal');
+  setTimeout(()=>document.getElementById('truncateConfirmInput').focus(),80);
+}
+function executeTruncate(){
+  const input=document.getElementById('truncateConfirmInput').value.trim();
+  if(input!==truncateTarget){toast('Table name does not match','err');return;}
+  closeModal('truncateModal');
+  runSQL(`DELETE FROM ${truncateTarget};`,'Truncating table…');
+}
+
+/* ════════════════════════════════════════
+   DROP TABLE
+════════════════════════════════════════ */
+function openDrop(name){
+  if(!name){toast('Load a table first','warn');return;}
+  dropTarget=name;
+  document.getElementById('dropSQL').textContent=`DROP TABLE IF EXISTS ${name};`;
+  document.getElementById('dropConfirmInput').value='';
+  openModal('dropModal');
+  setTimeout(()=>document.getElementById('dropConfirmInput').focus(),80);
+}
+function executeDrop(){
+  const input=document.getElementById('dropConfirmInput').value.trim();
+  if(input!==dropTarget){toast('Table name does not match','err');return;}
+  closeModal('dropModal');
+  runSQL(`DROP TABLE IF EXISTS ${dropTarget};`,'Dropping table…');
+}
+
+/* ════════════════════════════════════════
+   ADD COLUMN
+════════════════════════════════════════ */
+function openAddColModal(){
+  document.getElementById('newColName').value='';
+  document.getElementById('newColDefault').value='';
+  openModal('addColModal');
+  setTimeout(()=>document.getElementById('newColName').focus(),80);
+}
+function executeAddColumn(){
+  const name=document.getElementById('newColName').value.trim();
+  const type=document.getElementById('newColType').value;
+  const defVal=document.getElementById('newColDefault').value.trim();
+  if(!name){toast('Column name required','warn');return;}
+  const tableName=getTableName();
+  if(!tableName){toast('Load a table first','err');return;}
+
+  let sql=`ALTER TABLE ${tableName} ADD COLUMN ${name} ${type}`;
+  if(defVal)sql+=` DEFAULT '${esc(defVal)}'`;
+  sql+=';';
+
+  // Add <th>
+  const headerRow=document.getElementById('headerRow');
+  const addTh=headerRow.querySelector('.add-col-th');
+  const colIdx=getHeaders().length;
+  const th=document.createElement('th');
+  th.textContent=name;th.dataset.col=colIdx;th.classList.add('new-col');
+  headerRow.insertBefore(th,addTh);
+
+  // Add cell to existing rows
+  document.querySelectorAll('#tbody tr:not(.new-row)').forEach(tr=>{
+    const td=document.createElement('td');
+    td.contentEditable='true';td.dataset.col=colIdx;
+    td.dataset.original='';td.classList.add('new-cell');
+    td.oninput=function(){markDirty(this);};
+    tr.appendChild(td);
+  });
+  // Add cell to new-rows
+  document.querySelectorAll('#tbody tr.new-row').forEach(tr=>{
+    const ph=tr.lastElementChild;
+    const td=document.createElement('td');
+    td.contentEditable='true';td.dataset.col=colIdx;
+    td.dataset.header=name;td.classList.add('new-cell');
+    td.oninput=()=>updateNewRowData(tr);
+    tr.insertBefore(td,ph);
+  });
+
+  newColumns.push({name,type,defVal,sql,colIdx});
+  closeModal('addColModal');
+  updateColChip();updateSaveUI();
+  toast(`Column "${name}" added — save to apply`,'ok');
+}
+
+/* ════════════════════════════════════════
+   DROP COLUMN
+════════════════════════════════════════ */
+function openDropColModal(){
+  const tableName=getTableName();
+  if(!tableName){toast('Load a table first','err');return;}
+  const headers=getHeaders();
+  if(!headers.length){toast('No columns found','err');return;}
+  const sel=document.getElementById('dropColSelect');
+  sel.innerHTML=headers.map(h=>`<option value="${h}">${h}</option>`).join('');
+  updateDropColSQL();
+  openModal('dropColModal');
+}
+function updateDropColSQL(){
+  const col=document.getElementById('dropColSelect').value;
+  const tableName=getTableName()||'<table>';
+  document.getElementById('dropColSQL').textContent=`ALTER TABLE ${tableName} DROP COLUMN ${col};`;
+}
+document.getElementById('dropColSelect').addEventListener('change',updateDropColSQL);
+function executeDropColumn(){
+  const col=document.getElementById('dropColSelect').value;
+  const tableName=getTableName();
+  if(!col||!tableName){toast('Missing column or table','err');return;}
+  closeModal('dropColModal');
+  runSQL(`ALTER TABLE ${tableName} DROP COLUMN ${col};`,'Dropping column…');
+}
+
+/* ════════════════════════════════════════
+   RENAME COLUMN
+════════════════════════════════════════ */
+function openRenameColModal(){
+  const tableName=getTableName();
+  if(!tableName){toast('Load a table first','err');return;}
+  const headers=getHeaders();
+  if(!headers.length){toast('No columns found','err');return;}
+  const sel=document.getElementById('renameColSelect');
+  sel.innerHTML=headers.map(h=>`<option value="${h}">${h}</option>`).join('');
+  document.getElementById('renameColNew').value='';
+  document.getElementById('renameColSQL').textContent='';
+  openModal('renameColModal');
+}
+function updateRenameSQL(){
+  const old=document.getElementById('renameColSelect').value;
+  const nw=document.getElementById('renameColNew').value.trim();
+  const tableName=getTableName()||'<table>';
+  document.getElementById('renameColSQL').textContent=nw
+    ?`ALTER TABLE ${tableName} RENAME COLUMN ${old} TO ${nw};`
+    :'';
+}
+function executeRenameColumn(){
+  const old=document.getElementById('renameColSelect').value;
+  const nw=document.getElementById('renameColNew').value.trim();
+  const tableName=getTableName();
+  if(!nw){toast('New name required','warn');return;}
+  if(!tableName){toast('Load a table first','err');return;}
+  closeModal('renameColModal');
+  runSQL(`ALTER TABLE ${tableName} RENAME COLUMN ${old} TO ${nw};`,'Renaming column…');
+}
+
+/* ════════════════════════════════════════
+   BUILD SAVE SQL
+════════════════════════════════════════ */
+function buildAllSQL(){
+  const tableName=getTableName();
+  if(!tableName){toast('Load a table first','err');return null;}
+  const headers=getHeaders();
+  const sqls=[];
+
+  // 1. ALTER TABLE — new columns
+  newColumns.forEach(c=>sqls.push(c.sql));
+
+  // 2. UPDATE — edited existing rows
+  const existingRows=document.querySelectorAll('#tbody tr:not(.new-row)');
+  for(const[rowIdx,cols] of Object.entries(dirtyRows)){
+    const tr=existingRows[rowIdx];if(!tr)continue;
+    const cells=Array.from(tr.querySelectorAll('td')).slice(1);
+    const pkCell=cells[pkCol];
+    const pkVal=pkCell?(pkCell.dataset.original||pkCell.innerText.trim()):'';
+    if(!pkVal)continue;
+    const sets=Object.entries(cols)
+      .filter(([c])=>headers[c])
+      .map(([c,v])=>`${headers[c]} = '${esc(v)}'`)
+      .join(', ');
+    if(sets)sqls.push(`UPDATE ${tableName} SET ${sets} WHERE ${headers[pkCol]} = '${esc(pkVal)}';`);
+  }
+
+  // 3. INSERT — new rows
+  newRows.forEach(row=>{
+    const pairs=Object.entries(row.data).filter(([,v])=>v!=='');
+    if(!pairs.length)return;
+    const cols=pairs.map(([k])=>k).join(', ');
+    const vals=pairs.map(([,v])=>`'${esc(v)}'`).join(', ');
+    sqls.push(`INSERT INTO ${tableName} (${cols}) VALUES (${vals});`);
+  });
+
+  return sqls;
+}
+
+function confirmSave(){
+  const sqls=buildAllSQL();
+  if(!sqls||!sqls.length){toast('No changes to save','warn');return;}
+  pendingSQL=sqls;
+  document.getElementById('saveSQLBox').textContent=sqls.join('\n');
+  openModal('saveModal');
+}
+function executeSave(){
+  closeModal('saveModal');
+  if(!pendingSQL.length)return;
+  runSQL(pendingSQL.join('\n'),'Saving changes…');
+}
+
+/* ════════════════════════════════════════
+   UI CHIPS
+════════════════════════════════════════ */
+function updateSaveUI(){
+  const editCount=Object.values(dirtyRows).reduce((a,r)=>a+Object.keys(r).length,0);
+  const hasChanges=editCount>0||newRows.length>0||newColumns.length>0;
+  document.getElementById('saveBtn').classList.toggle('on',hasChanges);
+  const dc=document.getElementById('dirtyChip');
+  if(editCount>0){dc.style.display='inline-flex';dc.textContent=editCount+' edit'+(editCount!==1?'s':'');}
+  else dc.style.display='none';
+}
+function updateNewRowChip(){
+  const c=document.getElementById('newRowChip');
+  c.style.display=newRows.length?'inline-flex':'none';
+  c.textContent=newRows.length+' new row'+(newRows.length!==1?'s':'');
+}
+function updateColChip(){
+  const c=document.getElementById('newColChip');
+  c.style.display=newColumns.length?'inline-flex':'none';
+  c.textContent=newColumns.length+' new col'+(newColumns.length!==1?'s':'');
+}
+
+/* ════════════════════════════════════════
+   COPY CSV
+════════════════════════════════════════ */
+function copyTable(){
+  const table=document.querySelector('.data-table');if(!table)return;
+  const rows=Array.from(table.querySelectorAll('tr'));
+  const csv=rows.map(r=>
+    Array.from(r.querySelectorAll('th,td')).slice(1)
+      .filter(c=>!c.classList.contains('add-col-th'))
+      .map(c=>'"'+c.innerText.trim().replace(/"/g,'""')+'"')
+      .join(',')
+  ).join('\n');
+  navigator.clipboard.writeText(csv).then(()=>toast('Copied as CSV ✓','ok')).catch(()=>toast('Copy failed','err'));
+}
+
+/* ════════════════════════════════════════
+   RUN SQL HELPER
+════════════════════════════════════════ */
+function runSQL(sql,msg){
+  document.getElementById('query').value=sql;
+  showLoading(msg||'Running…');
+  document.getElementById('queryForm').submit();
+}
+
+/* ════════════════════════════════════════
+   MODAL / LOADING / TOAST
+════════════════════════════════════════ */
+function openModal(id){document.getElementById(id).classList.add('show');}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+document.querySelectorAll('.modal-bg').forEach(bg=>
+  bg.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');})
+);
+document.getElementById('newColName').addEventListener('keydown',e=>{if(e.key==='Enter')executeAddColumn();});
+document.getElementById('truncateConfirmInput').addEventListener('keydown',e=>{if(e.key==='Enter')executeTruncate();});
+document.getElementById('dropConfirmInput').addEventListener('keydown',e=>{if(e.key==='Enter')executeDrop();});
+
+function showLoading(msg){
+  document.getElementById('loadingText').textContent=msg||'Loading…';
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function toast(msg,type='ok'){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast show '+type;
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+const activePlatform = localStorage.getItem('activePlatform');
+document.getElementById('sidebar1').style.display =
+  activePlatform === 'pentaho' ? 'block' : 'none';
+
+document.getElementById('sidebar2').style.display =
+  activePlatform === 'talend' ? 'block' : 'none';
+
+/* ════════════════════════════════════════
+   INIT
+════════════════════════════════════════ */
+const qa=document.getElementById('query');
+if(qa)qa.setSelectionRange(9999,9999);
+
+{% if rows and not error and query %}
+  {% if 'UPDATE' in query|upper or 'INSERT' in query|upper or 'DELETE' in query|upper or 'ALTER' in query|upper or 'DROP' in query|upper %}
+    window.addEventListener('DOMContentLoaded',()=>toast('Operation completed ✓','ok'));
+  {% endif %}
+{% endif %}
+</script>
+</body>
+</html>
